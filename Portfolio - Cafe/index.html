@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Café Portfolio</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a0a0a; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+  // CENA
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a0a0a);
+
+  // CAMERA isométrica
+  const w = window.innerWidth, h = window.innerHeight;
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
+  camera.position.set(2, 2, 2);
+  camera.lookAt(0, 0, 0);
+
+  // RENDERER
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  document.body.appendChild(renderer.domElement);
+
+  // LUZ
+  const ambient = new THREE.AmbientLight(0xffffff, 1.5);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+  dirLight.position.set(5, 10, 5);
+  scene.add(dirLight);
+
+  // CONTROLES (para explorar a cena por enquanto)
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // CARREGAR O GLB
+  const loader = new GLTFLoader();
+  loader.load(
+    './assets/cafe_v001.glb',
+    (gltf) => {
+      scene.add(gltf.scene);
+      console.log('✅ Café carregado!');
+
+      // Lista todos os objetos no console
+      gltf.scene.traverse((obj) => {
+        if (obj.isMesh) console.log('Objeto:', obj.name);
+      });
+    },
+    (progress) => {
+      console.log('Carregando...', (progress.loaded / progress.total * 100).toFixed(0) + '%');
+    },
+    (error) => {
+      console.error('Erro ao carregar o GLB:', error);
+    }
+  );
+
+  // RESIZE
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // LOOP
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+</script>
+</body>
+</html>

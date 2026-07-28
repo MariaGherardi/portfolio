@@ -87,73 +87,102 @@
       console.error('Erro ao carregar o GLB:', error);
     }
   );
-  // RAYCASTER
+  
+  // RAYCASTER SISTEMA CLIQUE E ZOOM
+  const meshesClicaveis = [
+    'mesh_glass_low',
+    'mesh_char_low',
+    'mesh_artstation_low',
+    'mesh_linkedin_low'
+  ];
+
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
 
   window.addEventListener('click', (event) => {
-    // 1. Calcula a posição do clique (-1 a +1)
+    // 1. Converte posição do clique para o padrão Three.js (-1 a +1)
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    // 2. Dispara o raio a partir da câmera
+    // 2. Dispara o raio
     raycaster.setFromCamera(mouse, camera);
 
-    // 3. Verifica intersecção com objetos da cena
+    // 3. Testa colisão na cena
     const intersects = raycaster.intersectObjects(scene.children, true);
 
     if (intersects.length > 0) {
-      // Objeto clicado
       const clickedObject = intersects[0].object;
-      console.log('Você clicou em:', clickedObject.name);
 
-      // Pega a posição central do objeto clicado
-      const targetPosition = new THREE.Vector3();
-      clickedObject.getWorldPosition(targetPosition);
+      // Pegamos o nome da Mesh (geometria) E o nome do nó pai/filho
+      const meshName = clickedObject.geometry ? clickedObject.geometry.name : '';
+      const objectName = clickedObject.name;
 
-      // Define a nova posição da câmera com um deslocamento (offset)
-      const offset = new THREE.Vector3(0.5, 0.4, 0.5);
-      const newCameraPos = targetPosition.clone().add(offset);
-
-      // Anima a CÂMERA até o objeto
-      gsap.to(camera.position, {
-        x: newCameraPos.x,
-        y: newCameraPos.y,
-        z: newCameraPos.z,
-        duration: 1.2,
-        ease: 'power2.out'
+      // 4. Verifica se a MESH clicada está na nossa lista
+      const eClicavel = meshesClicaveis.some((nome) => {
+        return meshName === nome || objectName === nome;
       });
 
-      // Anima o ALVO dos controles para girar em torno do novo objeto
-      gsap.to(controls.target, {
-        x: targetPosition.x,
-        y: targetPosition.y,
-        z: targetPosition.z,
-        duration: 1.2,
-        ease: 'power2.out',
-        onUpdate: () => controls.update()
-      });
+      if (eClicavel) {
+        console.log('🎯 Você clicou na mesh interativa:', meshName || objectName);
+
+        // Pega a posição real do objeto no mundo 3D
+        const targetPosition = new THREE.Vector3();
+        clickedObject.getWorldPosition(targetPosition);
+
+        // Distância/Posição que a câmera vai assumir ao aproximar
+        // Ajuste os valores (x, y, z) se quiser mais perto ou mais longe
+        const offset = new THREE.Vector3(0.6, 0.4, 0.6);
+        const newCameraPos = targetPosition.clone().add(offset);
+
+        // Animação GSAP da CÂMERA
+        gsap.to(camera.position, {
+          x: newCameraPos.x,
+          y: newCameraPos.y,
+          z: newCameraPos.z,
+          duration: 1.2,
+          ease: 'power2.out'
+        });
+
+        // Animação GSAP do ALVO (foco do OrbitControls)
+        gsap.to(controls.target, {
+          x: targetPosition.x,
+          y: targetPosition.y,
+          z: targetPosition.z,
+          duration: 1.2,
+          ease: 'power2.out',
+          onUpdate: () => controls.update()
+        });
+
+      } else {
+        // Se clicar em um dos 76 outros nós não permitidos -> Reseta a câmera
+        resetCamera();
+      }
 
     } else {
-      // Se clicar no fundo vazio -> Reseta para a visão inicial do Café
-      gsap.to(camera.position, {
-        x: initialCameraPos.x,
-        y: initialCameraPos.y,
-        z: initialCameraPos.z,
-        duration: 1.2,
-        ease: 'power2.out'
-      });
-
-      gsap.to(controls.target, {
-        x: initialTargetPos.x,
-        y: initialTargetPos.y,
-        z: initialTargetPos.z,
-        duration: 1.2,
-        ease: 'power2.out',
-        onUpdate: () => controls.update()
-      });
+      // Clicou fora no espaço/fundo -> Reseta a câmera
+      resetCamera();
     }
   });
+
+  // Função para voltar à visão inicial do Café
+  function resetCamera() {
+    gsap.to(camera.position, {
+      x: initialCameraPos.x,
+      y: initialCameraPos.y,
+      z: initialCameraPos.z,
+      duration: 1.2,
+      ease: 'power2.out'
+    });
+
+    gsap.to(controls.target, {
+      x: initialTargetPos.x,
+      y: initialTargetPos.y,
+      z: initialTargetPos.z,
+      duration: 1.2,
+      ease: 'power2.out',
+      onUpdate: () => controls.update()
+    });
+  }
   
   // RESIZE
   window.addEventListener('resize', () => {

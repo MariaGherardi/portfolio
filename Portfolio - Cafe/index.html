@@ -110,7 +110,7 @@
   // CAMERA isométrica
   const w = window.innerWidth, h = window.innerHeight;
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  const initialCameraPos = new THREE.Vector3(-1.0, 0.5, 1.2);
+  const initialCameraPos = new THREE.Vector3(-1.3, 0.5, 1.2);
   const initialTargetPos = new THREE.Vector3(0, 0, 0);  
   camera.position.copy(initialCameraPos);
   camera.lookAt(initialTargetPos);
@@ -136,8 +136,8 @@
   controls.rotateSpeed = 0.4;
   controls.enableDamping = true;
   controls.dampingFactor = 0.03;
-  controls.minAzimuthAngle = -Math.PI * 0.7; // Impede ver as costas da casa
-  controls.maxAzimuthAngle = Math.PI * 0.7;  // Impede ver as costas da casa
+  controls.minAzimuthAngle = -Math.PI * 0.6; // Impede ver as costas da casa
+  controls.maxAzimuthAngle = Math.PI * 0.6;  // Impede ver as costas da casa
   controls.minPolarAngle = Math.PI * 0.2;
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;

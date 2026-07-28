@@ -99,42 +99,69 @@
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
 
-  window.addEventListener('click', (event) => {
-    // 1. Converte posição do clique para o padrão Three.js (-1 a +1)
+  // Guardamos o estado: se está em zoom e onde a câmera estava ANTES do zoom
+  let isZoomedIn = false;
+  const savedCameraPos = new THREE.Vector3();
+  const savedTargetPos = new THREE.Vector3();
+
+  // Variáveis para detectar se o clique foi apenas um "arrasto" de câmera
+  let isDragging = false;
+  let pointerDownPos = { x: 0, y: 0 };
+
+  // 1. Guarda a posição de onde o botão do mouse/dedo começou a clicar
+  window.addEventListener('pointerdown', (e) => {
+    isDragging = false;
+    pointerDownPos = { x: e.clientX, y: e.clientY };
+  });
+
+  // 2. Se o mouse moveu mais de 5px, significa que você está APENAS ORBITANDO/ARRASTANDO a câmera
+  window.addEventListener('pointermove', (e) => {
+    const moveX = Math.abs(e.clientX - pointerDownPos.x);
+    const moveY = Math.abs(e.clientY - pointerDownPos.y);
+    if (moveX > 5 || moveY > 5) {
+      isDragging = true;
+    }
+  });
+
+  // 3. Executa o clique apenas se NÃO foi um arrasto de câmera
+  window.addEventListener('pointerup', (event) => {
+    if (isDragging) return; // Se você estava girando a cena, ignora e NÃO dá reset!
+
+    // Calcula coordenadas (-1 a +1)
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-    // 2. Dispara o raio
     raycaster.setFromCamera(mouse, camera);
-
-    // 3. Testa colisão na cena
     const intersects = raycaster.intersectObjects(scene.children, true);
 
     if (intersects.length > 0) {
       const clickedObject = intersects[0].object;
-
-      // Pegamos o nome da Mesh (geometria) E o nome do nó pai/filho
       const meshName = clickedObject.geometry ? clickedObject.geometry.name : '';
       const objectName = clickedObject.name;
 
-      // 4. Verifica se a MESH clicada está na nossa lista
+      // Verifica se é clicável
       const eClicavel = meshesClicaveis.some((nome) => {
         return meshName === nome || objectName === nome;
       });
 
       if (eClicavel) {
-        console.log('🎯 Você clicou na mesh interativa:', meshName || objectName);
+        // --- CLICOU EM UM OBJETO VALIDO ---
+        
+        // Se ainda NÃO estamos em zoom, SALVA a posição que o usuário parou
+        if (!isZoomedIn) {
+          savedCameraPos.copy(camera.position);
+          savedTargetPos.copy(controls.target);
+          isZoomedIn = true;
+        }
 
-        // Pega a posição real do objeto no mundo 3D
         const targetPosition = new THREE.Vector3();
         clickedObject.getWorldPosition(targetPosition);
 
-        // Distância/Posição que a câmera vai assumir ao aproximar
-        // Ajuste os valores (x, y, z) se quiser mais perto ou mais longe
-        const offset = new THREE.Vector3(0.6, 0.4, 0.6);
+        // Define a aproximação suave (offset)
+        const offset = new THREE.Vector3(0.5, 0.3, 0.5);
         const newCameraPos = targetPosition.clone().add(offset);
 
-        // Animação GSAP da CÂMERA
+        // Animação GSAP da Câmera
         gsap.to(camera.position, {
           x: newCameraPos.x,
           y: newCameraPos.y,
@@ -143,7 +170,7 @@
           ease: 'power2.out'
         });
 
-        // Animação GSAP do ALVO (foco do OrbitControls)
+        // Foca o OrbitControls no objeto
         gsap.to(controls.target, {
           x: targetPosition.x,
           y: targetPosition.y,
@@ -153,34 +180,37 @@
           onUpdate: () => controls.update()
         });
 
-      } else {
-        // Se clicar em um dos 76 outros nós não permitidos -> Reseta a câmera
-        resetCamera();
+      } else if (isZoomedIn) {
+        // Clicou em algo neutro enquanto estava com zoom -> Volta para onde parou!
+        resetToSavedPosition();
       }
 
-    } else {
-      // Clicou fora no espaço/fundo -> Reseta a câmera
-      resetCamera();
+    } else if (isZoomedIn) {
+      // Clicou no fundo/fora da cena enquanto estava com zoom -> Volta para onde parou!
+      resetToSavedPosition();
     }
   });
 
-  // Função para voltar à visão inicial do Café
-  function resetCamera() {
+  // Função para VOLTAR exatamente de onde a pessoa estava explorando
+  function resetToSavedPosition() {
     gsap.to(camera.position, {
-      x: initialCameraPos.x,
-      y: initialCameraPos.y,
-      z: initialCameraPos.z,
+      x: savedCameraPos.x,
+      y: savedCameraPos.y,
+      z: savedCameraPos.z,
       duration: 1.2,
       ease: 'power2.out'
     });
 
     gsap.to(controls.target, {
-      x: initialTargetPos.x,
-      y: initialTargetPos.y,
-      z: initialTargetPos.z,
+      x: savedTargetPos.x,
+      y: savedTargetPos.y,
+      z: savedTargetPos.z,
       duration: 1.2,
       ease: 'power2.out',
-      onUpdate: () => controls.update()
+      onUpdate: () => controls.update(),
+      onComplete: () => {
+        isZoomedIn = false; // Desativa o estado de zoom
+      }
     });
   }
   

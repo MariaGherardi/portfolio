@@ -210,9 +210,7 @@
 
   function removerOutline() {
     if (currentOutlineMesh) {
-      if (currentOutlineMesh.parent) {
-        currentOutlineMesh.parent.remove(currentOutlineMesh);
-      }
+      scene.remove(currentOutlineMesh); // Remove direto da cena
       currentOutlineMesh.geometry.dispose();
       currentOutlineMesh = null;
     }
@@ -221,17 +219,19 @@
   function criarOutline(targetMesh) {
     removerOutline();
 
-    // Clona a geometria exata do objeto
-    const outlineGeo = targetMesh.geometry.clone();
-    
-    const outlineMesh = new THREE.Mesh(outlineGeo, outlineMaterial);
-    
-    // Mantém a escala 1:1, pois a expansão é feita via Shader (Normal Offset)
-    outlineMesh.scale.set(1, 1, 1);
-    outlineMesh.position.set(0, 0, 0);
-    outlineMesh.rotation.set(0, 0, 0);
+    // Garante que o objeto pai tenha todas as transformações de mundo atualizadas
+    targetMesh.updateMatrixWorld(true);
 
-    targetMesh.add(outlineMesh);
+    // Clona a geometria do objeto
+    const outlineGeo = targetMesh.geometry.clone();
+    const outlineMesh = new THREE.Mesh(outlineGeo, outlineMaterial);
+
+    // Desativa atualização automática e força o alinhamento exato na posição global da cena
+    outlineMesh.matrixAutoUpdate = false;
+    outlineMesh.matrix.copy(targetMesh.matrixWorld);
+
+    // Adiciona na cena global (evita multiplicar transformações de nós do GLTF)
+    scene.add(outlineMesh);
     currentOutlineMesh = outlineMesh;
   }
 

@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cafe Portfolio</title>
   <script src="https://platform.linkedin.com/badges/js/profile.js" async defer type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #1a0a0a; overflow: hidden; }
-    canvas { display: block; }
+    canvas { display: block; cursor: pointer; }
   </style>
 </head>
   
@@ -34,8 +35,10 @@
   // CAMERA isométrica
   const w = window.innerWidth, h = window.innerHeight;
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  camera.position.set(1.2, 1, 1.2);
-  camera.lookAt(0, 0, 0);
+  const initialCameraPos = new THREE.Vector3(1.2, 1, 1.2);
+  const initialTargetPos = new THREE.Vector3(0, 0, 0);  
+  camera.position.copy(initialCameraPos);
+  camera.lookAt(initialTargetPos);
 
   // RENDERER
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -62,7 +65,7 @@
   controls.maxAzimuthAngle = Math.PI * 0.7;
   controls.minPolarAngle = Math.PI * 0.2;
   controls.maxPolarAngle = Math.PI * 0.55;
-  controls.enableZoom = true;
+  controls.enableZoom = false;
 
   // CARREGAR O GLB
   const loader = new GLTFLoader();
@@ -84,7 +87,74 @@
       console.error('Erro ao carregar o GLB:', error);
     }
   );
+  // RAYCASTER
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
 
+  window.addEventListener('click', (event) => {
+    // 1. Calcula a posição do clique (-1 a +1)
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    // 2. Dispara o raio a partir da câmera
+    raycaster.setFromCamera(mouse, camera);
+
+    // 3. Verifica intersecção com objetos da cena
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    if (intersects.length > 0) {
+      // Objeto clicado
+      const clickedObject = intersects[0].object;
+      console.log('Você clicou em:', clickedObject.name);
+
+      // Pega a posição central do objeto clicado
+      const targetPosition = new THREE.Vector3();
+      clickedObject.getWorldPosition(targetPosition);
+
+      // Define a nova posição da câmera com um deslocamento (offset)
+      const offset = new THREE.Vector3(0.5, 0.4, 0.5);
+      const newCameraPos = targetPosition.clone().add(offset);
+
+      // Anima a CÂMERA até o objeto
+      gsap.to(camera.position, {
+        x: newCameraPos.x,
+        y: newCameraPos.y,
+        z: newCameraPos.z,
+        duration: 1.2,
+        ease: 'power2.out'
+      });
+
+      // Anima o ALVO dos controles para girar em torno do novo objeto
+      gsap.to(controls.target, {
+        x: targetPosition.x,
+        y: targetPosition.y,
+        z: targetPosition.z,
+        duration: 1.2,
+        ease: 'power2.out',
+        onUpdate: () => controls.update()
+      });
+
+    } else {
+      // Se clicar no fundo vazio -> Reseta para a visão inicial do Café
+      gsap.to(camera.position, {
+        x: initialCameraPos.x,
+        y: initialCameraPos.y,
+        z: initialCameraPos.z,
+        duration: 1.2,
+        ease: 'power2.out'
+      });
+
+      gsap.to(controls.target, {
+        x: initialTargetPos.x,
+        y: initialTargetPos.y,
+        z: initialTargetPos.z,
+        duration: 1.2,
+        ease: 'power2.out',
+        onUpdate: () => controls.update()
+      });
+    }
+  });
+  
   // RESIZE
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;

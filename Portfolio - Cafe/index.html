@@ -141,13 +141,21 @@
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;
 
-  // CARREGAR O GLB
+  // CARREGAR O GLB E ESCONDER AS BORDAS DO BLENDER
   const loader = new GLTFLoader();
   loader.load(
     './assets/cafe_v007.glb',
     (gltf) => {
       scene.add(gltf.scene);
-      console.log('✅ Café carregado!');
+
+      // Desativa a visibilidade das bordas "_outline" ao iniciar a aplicação
+      gltf.scene.traverse((child) => {
+        if (child.name.endsWith('_outline')) {
+          child.visible = false;
+        }
+      });
+
+      console.log('✅ Café e Contornos carregados com sucesso!');
     },
     (progress) => {},
     (error) => { console.error('Erro ao carregar o GLB:', error); }
@@ -158,7 +166,6 @@
     'mesh_char_low': {
       titulo: 'Personagem',
       descricao: 'Modelo do personagem interagindo no cenário.',
-      // RESTAURADO: Posição bem de frente para o cilindro/personagem
       cameraPos: { x: -0.6, y: 0.35, z: 0.3 }, 
       targetPos: { x: 0.15, y: 0.2, z: 0 }
     },
@@ -182,54 +189,25 @@
     }
   };
 
-  // --- LÓGICA DO INVERTED HULL COM VERTEX SHADER (NORMAL OFFSET) ---
-  const outlineMaterial = new THREE.ShaderMaterial({
-    uniforms: {
-      offset: { value: 0.008 }, // Espessura fina ajustada para o tamanho da peça
-      color: { value: new THREE.Color(0xf39c12) }
-    },
-    vertexShader: `
-      uniform float offset;
-      void main() {
-        vec3 newPosition = position + normal * offset;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 color;
-      void main() {
-        gl_FragColor = vec4(color, 1.0);
-      }
-    `,
-    side: THREE.BackSide,
-    depthWrite: false,
-    depthTest: false // <-- O SEGREDO: Impede que o balcão/parede tampem a linha amarela!
-  });
+  // --- CONTROLE DE VISIBILIDADE DAS BORDAS FEITAS NO BLENDER ---
+  let objetoFocadoAtual = null;
 
-  function removerOutline() {
-    if (currentOutlineMesh) {
-      scene.remove(currentOutlineMesh);
-      currentOutlineMesh.geometry.dispose();
-      currentOutlineMesh = null;
+  function atualizarOutline(hoveredMesh) {
+    // Esconde a borda do objeto anterior
+    if (objetoFocadoAtual && objetoFocadoAtual !== hoveredMesh) {
+      const antigoOutline = scene.getObjectByName(objetoFocadoAtual.name + '_outline');
+      if (antigoOutline) antigoOutline.visible = false;
+      objetoFocadoAtual = null;
     }
-  }
 
-  function criarOutline(targetMesh) {
-    removerOutline();
-
-    targetMesh.updateMatrixWorld(true);
-
-    const outlineGeo = targetMesh.geometry.clone();
-    const outlineMesh = new THREE.Mesh(outlineGeo, outlineMaterial);
-
-    // Garante que o contorno seja renderizado POR CIMA de todo o cenário
-    outlineMesh.renderOrder = 999;
-
-    outlineMesh.matrixAutoUpdate = false;
-    outlineMesh.matrix.copy(targetMesh.matrixWorld);
-
-    scene.add(outlineMesh);
-    currentOutlineMesh = outlineMesh;
+    // Mostra a borda do novo objeto sob o mouse
+    if (hoveredMesh) {
+      const novoOutline = scene.getObjectByName(hoveredMesh.name + '_outline');
+      if (novoOutline) {
+        novoOutline.visible = true;
+        objetoFocadoAtual = hoveredMesh;
+      }
+    }
   }
 
   // RAYCASTING E EVENTOS
@@ -265,16 +243,14 @@
       );
 
       if (chave) {
-        if (!currentOutlineMesh || currentOutlineMesh.parent !== hoveredObject) {
-          criarOutline(hoveredObject);
-        }
+        atualizarOutline(hoveredObject);
         renderer.domElement.style.cursor = 'pointer';
       } else {
-        removerOutline();
+        atualizarOutline(null);
         renderer.domElement.style.cursor = 'default';
       }
     } else {
-      removerOutline();
+      atualizarOutline(null);
       renderer.domElement.style.cursor = 'default';
     }
   });

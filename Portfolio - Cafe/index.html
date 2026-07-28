@@ -185,13 +185,12 @@
   // --- LÓGICA DO INVERTED HULL COM VERTEX SHADER (NORMAL OFFSET) ---
   const outlineMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      offset: { value: 0.015 }, // Espessura do contorno (ajuste se quiser mais grosso/fino)
-      color: { value: new THREE.Color(0xf39c12) } // Cor dourada
+      offset: { value: 0.008 }, // Espessura fina ajustada para o tamanho da peça
+      color: { value: new THREE.Color(0xf39c12) }
     },
     vertexShader: `
       uniform float offset;
       void main() {
-        // Empurra o vértice na direção da sua própria normal
         vec3 newPosition = position + normal * offset;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
       }
@@ -203,14 +202,13 @@
       }
     `,
     side: THREE.BackSide,
-    depthWrite: false
+    depthWrite: false,
+    depthTest: false // <-- O SEGREDO: Impede que o balcão/parede tampem a linha amarela!
   });
-
-  let currentOutlineMesh = null;
 
   function removerOutline() {
     if (currentOutlineMesh) {
-      scene.remove(currentOutlineMesh); // Remove direto da cena
+      scene.remove(currentOutlineMesh);
       currentOutlineMesh.geometry.dispose();
       currentOutlineMesh = null;
     }
@@ -219,18 +217,17 @@
   function criarOutline(targetMesh) {
     removerOutline();
 
-    // Garante que o objeto pai tenha todas as transformações de mundo atualizadas
     targetMesh.updateMatrixWorld(true);
 
-    // Clona a geometria do objeto
     const outlineGeo = targetMesh.geometry.clone();
     const outlineMesh = new THREE.Mesh(outlineGeo, outlineMaterial);
 
-    // Desativa atualização automática e força o alinhamento exato na posição global da cena
+    // Garante que o contorno seja renderizado POR CIMA de todo o cenário
+    outlineMesh.renderOrder = 999;
+
     outlineMesh.matrixAutoUpdate = false;
     outlineMesh.matrix.copy(targetMesh.matrixWorld);
 
-    // Adiciona na cena global (evita multiplicar transformações de nós do GLTF)
     scene.add(outlineMesh);
     currentOutlineMesh = outlineMesh;
   }

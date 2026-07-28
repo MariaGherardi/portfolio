@@ -34,7 +34,7 @@
   // CAMERA isométrica
   const w = window.innerWidth, h = window.innerHeight;
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  camera.position.set(2, 2, 2);
+  camera.position.set(1.2, 1, 1.2);
   camera.lookAt(0, 0, 0);
 
   // RENDERER
@@ -56,6 +56,12 @@
   // CONTROLES (para explorar a cena por enquanto)
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.minAzimuthAngle = -Math.PI * 0.75;
+  controls.maxAzimuthAngle = Math.PI * 0.75;
+  controls.minPolarAngle = Math.PI * 0.2;
+  controls.maxPolarAngle = Math.PI * 0.55;
+  controls.enableZoom = false;
 
   // CARREGAR O GLB
   const loader = new GLTFLoader();

@@ -136,8 +136,8 @@
   controls.rotateSpeed = 0.4;
   controls.enableDamping = true;
   controls.dampingFactor = 0.03;
-  controls.minAzimuthAngle = -Math.PI * 0.25; // Impede ver as costas da casa
-  controls.maxAzimuthAngle = Math.PI * 0.25;  // Impede ver as costas da casa
+  controls.minAzimuthAngle = -Math.PI * 0.7; // Impede ver as costas da casa
+  controls.maxAzimuthAngle = Math.PI * 0.7;  // Impede ver as costas da casa
   controls.minPolarAngle = Math.PI * 0.2;
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;
@@ -163,9 +163,7 @@
     }
   );
 
-  // =========================================================
-  // 🎯 CONFIGURAÇÃO DOS 4 ASSETS, CÂMERA LATERAL E MODAL UI
-  // =========================================================
+  //  CONFIGURAÇÃO DOS 4 ASSETS, CÂMERA LATERAL E MODAL UI
   const configObjetos = {
     'mesh_glass_low': {
       titulo: 'Vidros e Cafeteira',
@@ -213,8 +211,12 @@
   });
 
   window.addEventListener('pointerup', (event) => {
-    // Se estava arrastando a câmera ou clicou no próprio modal, ignora o raio
+    // Se arrastou a tela ou clicou no próprio modal, ignora
     if (isDragging || event.target.closest('#info-panel')) return;
+
+    // Se a câmera já estiver travada em zoom num objeto, IGNOIRA cliques na tela 3D
+    // (Agora o usuário é OBRIGADO a clicar no 'X' para sair)
+    if (isZoomedIn) return; 
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -234,14 +236,10 @@
 
       if (chave) {
         focarObjeto(configObjetos[chave]);
-      } else if (isZoomedIn) {
-        resetToInitialPosition();
       }
-    } else if (isZoomedIn) {
-      resetToInitialPosition();
     }
   });
-
+  
   // Função para focar o objeto e abrir o painel UI
   function focarObjeto(dados) {
     isZoomedIn = true;

@@ -6,14 +6,89 @@
   <title>Cafe Portfolio</title>
   <script src="https://platform.linkedin.com/badges/js/profile.js" async defer type="text/javascript"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #1a0a0a; overflow: hidden; }
+    body { 
+      background: #1a0a0a; 
+      overflow: hidden; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
     canvas { display: block; cursor: pointer; }
+
+    /* CARD DE INFORMAÇÕES (MODAL DIREITO) */
+    #info-panel {
+      position: absolute;
+      top: 50%;
+      right: -450px; /* Escondido por padrão fora da tela */
+      transform: translateY(-50%);
+      width: 380px;
+      max-width: 85vw;
+      background: rgba(35, 35, 35, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+      color: #ffffff;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      transition: right 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 10;
+    }
+
+    /* Classe ativada no clique do objeto */
+    #info-panel.active { 
+      right: 40px; 
+    }
+
+    /* BOTÃO FECHAR (X) */
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    #info-title {
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+      color: #f39c12;
+    }
+
+    #info-description {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #ddd;
+    }
   </style>
 </head>
   
-<body>              
+<body>
+
+  <!-- RETÂNGULO CINZA (UI DO MODAL) -->
+  <div id="info-panel">
+    <button class="close-btn" id="close-btn">&times;</button>
+    <h2 id="info-title">Título do Objeto</h2>
+    <p id="info-description">Descrição do asset selecionado...</p>
+  </div>
+
 <script type="importmap">
   {
     "imports": {
@@ -56,13 +131,13 @@
   frontLight.position.set(-2, 3, 5);
   scene.add(frontLight);
 
-  // CONTROLES (para explorar a cena por enquanto)
+  // CONTROLES (para explorar a cena)
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.rotateSpeed = 0.4;
   controls.enableDamping = true;
   controls.dampingFactor = 0.03;
-  controls.minAzimuthAngle = -Math.PI * 0.7;
-  controls.maxAzimuthAngle = Math.PI * 0.7;
+  controls.minAzimuthAngle = -Math.PI * 0.25; // Impede ver as costas da casa
+  controls.maxAzimuthAngle = Math.PI * 0.25;  // Impede ver as costas da casa
   controls.minPolarAngle = Math.PI * 0.2;
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;
@@ -87,47 +162,60 @@
       console.error('Erro ao carregar o GLB:', error);
     }
   );
-  
-  // RAYCASTER SISTEMA CLIQUE E ZOOM
-  const meshesClicaveis = [
-    'mesh_glass_low',
-    'mesh_char_low',
-    'mesh_artstation_low',
-    'mesh_linkedin_low'
-  ];
+
+  // =========================================================
+  // 🎯 CONFIGURAÇÃO DOS 4 ASSETS, CÂMERA LATERAL E MODAL UI
+  // =========================================================
+  const configObjetos = {
+    'mesh_glass_low': {
+      titulo: 'Vidros e Cafeteira',
+      descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.',
+      cameraPos: { x: 0.7, y: 0.5, z: 0.7 },
+      targetPos: { x: 0.1, y: 0.2, z: 0.0 }
+    },
+    'mesh_char_low': {
+      titulo: 'Personagem',
+      descricao: 'Modelo do personagem interagindo no cenário.',
+      cameraPos: { x: 0.9, y: 0.6, z: 0.9 },
+      targetPos: { x: 0.0, y: 0.3, z: 0.1 }
+    },
+    'mesh_artstation_low': {
+      titulo: 'ArtStation',
+      descricao: 'Confira meus outros modelos no portfólio do ArtStation.',
+      cameraPos: { x: 0.6, y: 0.4, z: 0.8 },
+      targetPos: { x: -0.1, y: 0.1, z: 0.2 }
+    },
+    'mesh_linkedin_low': {
+      titulo: 'LinkedIn',
+      descricao: 'Conecte-se comigo no LinkedIn para oportunidades.',
+      cameraPos: { x: 0.8, y: 0.4, z: 0.5 },
+      targetPos: { x: 0.2, y: 0.1, z: -0.1 }
+    }
+  };
 
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
-
-  // Guardamos o estado: se está em zoom e onde a câmera estava ANTES do zoom
   let isZoomedIn = false;
-  const savedCameraPos = new THREE.Vector3();
-  const savedTargetPos = new THREE.Vector3();
 
-  // Variáveis para detectar se o clique foi apenas um "arrasto" de câmera
+  // Lógica para detectar se foi apenas um arrasto de rotação da cena
   let isDragging = false;
   let pointerDownPos = { x: 0, y: 0 };
 
-  // 1. Guarda a posição de onde o botão do mouse/dedo começou a clicar
   window.addEventListener('pointerdown', (e) => {
     isDragging = false;
     pointerDownPos = { x: e.clientX, y: e.clientY };
   });
 
-  // 2. Se o mouse moveu mais de 5px, significa que você está APENAS ORBITANDO/ARRASTANDO a câmera
   window.addEventListener('pointermove', (e) => {
-    const moveX = Math.abs(e.clientX - pointerDownPos.x);
-    const moveY = Math.abs(e.clientY - pointerDownPos.y);
-    if (moveX > 5 || moveY > 5) {
+    if (Math.abs(e.clientX - pointerDownPos.x) > 5 || Math.abs(e.clientY - pointerDownPos.y) > 5) {
       isDragging = true;
     }
   });
 
-  // 3. Executa o clique apenas se NÃO foi um arrasto de câmera
   window.addEventListener('pointerup', (event) => {
-    if (isDragging) return; // Se você estava girando a cena, ignora e NÃO dá reset!
+    // Se estava arrastando a câmera ou clicou no próprio modal, ignora o raio
+    if (isDragging || event.target.closest('#info-panel')) return;
 
-    // Calcula coordenadas (-1 a +1)
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
@@ -139,81 +227,79 @@
       const meshName = clickedObject.geometry ? clickedObject.geometry.name : '';
       const objectName = clickedObject.name;
 
-      // Verifica se é clicável
-      const eClicavel = meshesClicaveis.some((nome) => {
-        return meshName === nome || objectName === nome;
-      });
+      // Busca qual dos 4 objetos foi clicado
+      const chave = Object.keys(configObjetos).find(
+        (key) => key === meshName || key === objectName
+      );
 
-      if (eClicavel) {
-        // --- CLICOU EM UM OBJETO VALIDO ---
-        
-        // Se ainda NÃO estamos em zoom, SALVA a posição que o usuário parou
-        if (!isZoomedIn) {
-          savedCameraPos.copy(camera.position);
-          savedTargetPos.copy(controls.target);
-          isZoomedIn = true;
-        }
-
-        const targetPosition = new THREE.Vector3();
-        clickedObject.getWorldPosition(targetPosition);
-
-        // Define a aproximação suave (offset)
-        const offset = new THREE.Vector3(0.5, 0.3, 0.5);
-        const newCameraPos = targetPosition.clone().add(offset);
-
-        // Animação GSAP da Câmera
-        gsap.to(camera.position, {
-          x: newCameraPos.x,
-          y: newCameraPos.y,
-          z: newCameraPos.z,
-          duration: 1.2,
-          ease: 'power2.out'
-        });
-
-        // Foca o OrbitControls no objeto
-        gsap.to(controls.target, {
-          x: targetPosition.x,
-          y: targetPosition.y,
-          z: targetPosition.z,
-          duration: 1.2,
-          ease: 'power2.out',
-          onUpdate: () => controls.update()
-        });
-
+      if (chave) {
+        focarObjeto(configObjetos[chave]);
       } else if (isZoomedIn) {
-        // Clicou em algo neutro enquanto estava com zoom -> Volta para onde parou!
-        resetToSavedPosition();
+        resetToInitialPosition();
       }
-
     } else if (isZoomedIn) {
-      // Clicou no fundo/fora da cena enquanto estava com zoom -> Volta para onde parou!
-      resetToSavedPosition();
+      resetToInitialPosition();
     }
   });
 
-  // Função para VOLTAR exatamente de onde a pessoa estava explorando
-  function resetToSavedPosition() {
+  // Função para focar o objeto e abrir o painel UI
+  function focarObjeto(dados) {
+    isZoomedIn = true;
+    controls.enabled = false; // Desativa rotação manual durante a visualização do objeto
+
+    // Preenche os dados e exibe o modal
+    document.getElementById('info-title').innerText = dados.titulo;
+    document.getElementById('info-description').innerText = dados.descricao;
+    document.getElementById('info-panel').classList.add('active');
+
+    // Anima a câmera para posicionar o objeto na esquerda
     gsap.to(camera.position, {
-      x: savedCameraPos.x,
-      y: savedCameraPos.y,
-      z: savedCameraPos.z,
+      x: dados.cameraPos.x,
+      y: dados.cameraPos.y,
+      z: dados.cameraPos.z,
       duration: 1.2,
       ease: 'power2.out'
     });
 
     gsap.to(controls.target, {
-      x: savedTargetPos.x,
-      y: savedTargetPos.y,
-      z: savedTargetPos.z,
+      x: dados.targetPos.x,
+      y: dados.targetPos.y,
+      z: dados.targetPos.z,
+      duration: 1.2,
+      ease: 'power2.out',
+      onUpdate: () => controls.update()
+    });
+  }
+
+  // Função para fechar o modal e resetar para a posição inicial do site
+  function resetToInitialPosition() {
+    document.getElementById('info-panel').classList.remove('active');
+
+    gsap.to(camera.position, {
+      x: initialCameraPos.x,
+      y: initialCameraPos.y,
+      z: initialCameraPos.z,
+      duration: 1.2,
+      ease: 'power2.out'
+    });
+
+    gsap.to(controls.target, {
+      x: initialTargetPos.x,
+      y: initialTargetPos.y,
+      z: initialTargetPos.z,
       duration: 1.2,
       ease: 'power2.out',
       onUpdate: () => controls.update(),
       onComplete: () => {
-        isZoomedIn = false; // Desativa o estado de zoom
+        isZoomedIn = false;
+        controls.enabled = true; // Reativa os controles manuais
       }
     });
   }
-  
+
+  // Evento do Botão X
+  document.getElementById('close-btn').addEventListener('click', resetToInitialPosition);
+
   // RESIZE
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -221,7 +307,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // LOOP
+  // LOOP DE ANIMAÇÃO
   function animate() {
     requestAnimationFrame(animate);
     controls.update();

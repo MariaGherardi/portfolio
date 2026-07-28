@@ -141,21 +141,13 @@
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;
 
-  // CARREGAR O GLB E ESCONDER AS BORDAS DO BLENDER
+  // CARREGAR O GLB
   const loader = new GLTFLoader();
   loader.load(
     './assets/cafe_v007.glb',
     (gltf) => {
       scene.add(gltf.scene);
-
-      // Desativa a visibilidade das bordas "_outline" ao iniciar a aplicação
-      gltf.scene.traverse((child) => {
-        if (child.name.endsWith('_outline')) {
-          child.visible = false;
-        }
-      });
-
-      console.log('✅ Café e Contornos carregados com sucesso!');
+      console.log('✅ Café carregado com sucesso!');
     },
     (progress) => {},
     (error) => { console.error('Erro ao carregar o GLB:', error); }
@@ -188,27 +180,6 @@
       targetPos: { x: 0.25, y: 0.1, z: -0.2 }
     }
   };
-
-  // --- CONTROLE DE VISIBILIDADE DAS BORDAS FEITAS NO BLENDER ---
-  let objetoFocadoAtual = null;
-
-  function atualizarOutline(hoveredMesh) {
-    // Esconde a borda do objeto anterior
-    if (objetoFocadoAtual && objetoFocadoAtual !== hoveredMesh) {
-      const antigoOutline = scene.getObjectByName(objetoFocadoAtual.name + '_outline');
-      if (antigoOutline) antigoOutline.visible = false;
-      objetoFocadoAtual = null;
-    }
-
-    // Mostra a borda do novo objeto sob o mouse
-    if (hoveredMesh) {
-      const novoOutline = scene.getObjectByName(hoveredMesh.name + '_outline');
-      if (novoOutline) {
-        novoOutline.visible = true;
-        objetoFocadoAtual = hoveredMesh;
-      }
-    }
-  }
 
   // RAYCASTING E EVENTOS
   const raycaster = new THREE.Raycaster();
@@ -243,14 +214,11 @@
       );
 
       if (chave) {
-        atualizarOutline(hoveredObject);
         renderer.domElement.style.cursor = 'pointer';
       } else {
-        atualizarOutline(null);
         renderer.domElement.style.cursor = 'default';
       }
     } else {
-      atualizarOutline(null);
       renderer.domElement.style.cursor = 'default';
     }
   });

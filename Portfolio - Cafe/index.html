@@ -182,11 +182,28 @@
     }
   };
 
-  // --- LÓGICA DO INVERTED HULL MELHORADA ---
-  const outlineMaterial = new THREE.MeshBasicMaterial({
-    color: 0xf39c12,
+  // --- LÓGICA DO INVERTED HULL COM VERTEX SHADER (NORMAL OFFSET) ---
+  const outlineMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      offset: { value: 0.015 }, // Espessura do contorno (ajuste se quiser mais grosso/fino)
+      color: { value: new THREE.Color(0xf39c12) } // Cor dourada
+    },
+    vertexShader: `
+      uniform float offset;
+      void main() {
+        // Empurra o vértice na direção da sua própria normal
+        vec3 newPosition = position + normal * offset;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 color;
+      void main() {
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
     side: THREE.BackSide,
-    depthWrite: false // Evita conflitos de renderização com o próprio objeto
+    depthWrite: false
   });
 
   let currentOutlineMesh = null;
@@ -208,12 +225,9 @@
     const outlineGeo = targetMesh.geometry.clone();
     
     const outlineMesh = new THREE.Mesh(outlineGeo, outlineMaterial);
-
-    // Ajuste de escala proporcional para cobrir todos os ângulos
-    const scaleFactor = 1.04;
-    outlineMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    // Copia a posição e rotações exatas do modelo
+    // Mantém a escala 1:1, pois a expansão é feita via Shader (Normal Offset)
+    outlineMesh.scale.set(1, 1, 1);
     outlineMesh.position.set(0, 0, 0);
     outlineMesh.rotation.set(0, 0, 0);
 

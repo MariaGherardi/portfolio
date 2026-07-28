@@ -213,12 +213,8 @@
   });
 
   window.addEventListener('pointerup', (event) => {
-    // Se arrastou a tela ou clicou no próprio modal, ignora
+    // Se arrastou a tela ou clicou no próprio modal UI, ignora
     if (isDragging || event.target.closest('#info-panel')) return;
-
-    // Se a câmera já estiver travada em zoom num objeto, IGNOIRA cliques na tela 3D
-    // (Agora o usuário é OBRIGADO a clicar no 'X' para sair)
-    if (isZoomedIn) return; 
 
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -236,6 +232,7 @@
         (key) => key === meshName || key === objectName
       );
 
+      // Se clicou em um dos objetos da lista, muda o foco direto para ele
       if (chave) {
         focarObjeto(configObjetos[chave]);
       }

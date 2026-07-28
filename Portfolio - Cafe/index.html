@@ -103,6 +103,10 @@
   import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+  import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+  
   // CENA
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x1a0a0a);
@@ -120,6 +124,27 @@
   renderer.setSize(w, h);
   renderer.setPixelRatio(window.devicePixelRatio);
   document.body.appendChild(renderer.domElement);
+
+  // --- NOVO: CONFIGURAÇÃO DO POST-PROCESSING (SHADER) ---
+  
+  // 1. O Compositor (gerencia os efeitos)
+  const composer = new EffectComposer(renderer);
+  
+  // 2. Pass de Renderização Básica (desenha a cena original primeiro)
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+
+  // 3. O Pass de Contorno (Outline Shader)
+  const outlinePass = new OutlinePass(new THREE.Vector2(w, h), scene, camera);
+  
+  // CONFIGURAÇÃO ESTÉTICA DO SHADER (Dourado, Grosso e Visível)
+  outlinePass.edgeStrength = 6.0;      // Força/Grossura da linha
+  outlinePass.edgeGlow = 1.0;          // Brilho suave ao redor
+  outlinePass.edgeThickness = 3.0;     // Espessura
+  outlinePass.visibleEdgeColor.set(0xf39c12); // Cor Dourada da sua UI
+  outlinePass.hiddenEdgeColor.set(0x1a0a0a);  // Cor quando objeto está escondido
+  
+  composer.addPass(outlinePass);
 
   // LUZ
   const ambient = new THREE.AmbientLight(0xffffff, 1.2);
@@ -209,6 +234,36 @@
   window.addEventListener('pointermove', (e) => {
     if (Math.abs(e.clientX - pointerDownPos.x) > 5 || Math.abs(e.clientY - pointerDownPos.y) > 5) {
       isDragging = true;
+    }
+    
+    // --- NOVA LÓGICA DO SHADER ---
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    // 1. Limpar contornos anteriores
+    outlinePass.selectedObjects = []; 
+    renderer.domElement.style.cursor = 'default';
+
+    if (intersects.length > 0) {
+      const hoveredObject = intersects[0].object;
+      const meshName = hoveredObject.geometry ? hoveredObject.geometry.name : '';
+      const objectName = hoveredObject.name;
+
+      // 2. Verificar se é um objeto selecionável da sua lista
+      const chave = Object.keys(configObjetos).find(
+        (key) => key === meshName || key === objectName
+      );
+
+      if (chave) {
+        // 3. ADICIONAR O OBJETO AO SHADER (Isso faz o contorno aparecer)
+        outlinePass.selectedObjects = [hoveredObject];
+        
+        // 4. Mudar o cursor para mãozinha
+        renderer.domElement.style.cursor = 'pointer';
+      }
     }
   });
 
@@ -308,7 +363,9 @@
   function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    renderer.render(scene, camera);
+    
+    // renderer.render(scene, camera); 
+    composer.render();               // <--- ADICIONE ESTA LINHA NOVA
   }
   animate();
 

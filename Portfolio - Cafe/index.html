@@ -149,20 +149,17 @@
       scene.add(gltf.scene);
       console.log('✅ Café carregado!');
     },
-    (progress) => {
-      console.log('Carregando...', (progress.loaded / progress.total * 100).toFixed(0) + '%');
-    },
-    (error) => {
-      console.error('Erro ao carregar o GLB:', error);
-    }
+    (progress) => {},
+    (error) => { console.error('Erro ao carregar o GLB:', error); }
   );
 
-  // CONFIGURAÇÃO DOS ASSETS E POSIÇÕES DA CÂMERA
+  // CONFIGURAÇÃO DOS ASSETS
   const configObjetos = {
     'mesh_char_low': {
       titulo: 'Personagem',
       descricao: 'Modelo do personagem interagindo no cenário.',
-      cameraPos: { x: -0.2, y: 0.35, z: 0.75 }, 
+      // RESTAURADO: Posição bem de frente para o cilindro/personagem
+      cameraPos: { x: -0.6, y: 0.35, z: 0.3 }, 
       targetPos: { x: 0.15, y: 0.2, z: 0 }
     },
     'mesh_glass_low': {
@@ -185,14 +182,14 @@
     }
   };
 
-  // --- LÓGICA DO INVERTED HULL OUTLINE ---
-  // Material Dourado renderizado pelo lado de dentro (BackSide)
+  // --- LÓGICA DO INVERTED HULL MELHORADA ---
   const outlineMaterial = new THREE.MeshBasicMaterial({
     color: 0xf39c12,
-    side: THREE.BackSide
+    side: THREE.BackSide,
+    depthWrite: false // Evita conflitos de renderização com o próprio objeto
   });
 
-  let currentOutlineMesh = null; // Guarda a malha do contorno atual
+  let currentOutlineMesh = null;
 
   function removerOutline() {
     if (currentOutlineMesh) {
@@ -205,20 +202,26 @@
   }
 
   function criarOutline(targetMesh) {
-    removerOutline(); // Remove qualquer contorno anterior
+    removerOutline();
 
-    // Cria uma nova malha idêntica mas usando o material invertido
-    const outlineMesh = new THREE.Mesh(targetMesh.geometry, outlineMaterial);
+    // Clona a geometria exata do objeto
+    const outlineGeo = targetMesh.geometry.clone();
     
-    // Infla a malha levemente (1.03 = 3% maior) para criar a borda em volta
-    outlineMesh.scale.set(1.03, 1.03, 1.03);
+    const outlineMesh = new THREE.Mesh(outlineGeo, outlineMaterial);
+
+    // Ajuste de escala proporcional para cobrir todos os ângulos
+    const scaleFactor = 1.04;
+    outlineMesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
     
-    // Adiciona como filho do objeto original para acompanhar posição e rotação
+    // Copia a posição e rotações exatas do modelo
+    outlineMesh.position.set(0, 0, 0);
+    outlineMesh.rotation.set(0, 0, 0);
+
     targetMesh.add(outlineMesh);
     currentOutlineMesh = outlineMesh;
   }
 
-  // RAYCASTING
+  // RAYCASTING E EVENTOS
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   let isZoomedIn = false;
@@ -230,7 +233,6 @@
     pointerDownPos = { x: e.clientX, y: e.clientY };
   });
 
-  // DETECTAR HOVER (POINTERMOVE)
   window.addEventListener('pointermove', (e) => {
     if (Math.abs(e.clientX - pointerDownPos.x) > 5 || Math.abs(e.clientY - pointerDownPos.y) > 5) {
       isDragging = true;
@@ -252,7 +254,6 @@
       );
 
       if (chave) {
-        // Se for um objeto clicável, desenha o contorno Inverted Hull
         if (!currentOutlineMesh || currentOutlineMesh.parent !== hoveredObject) {
           criarOutline(hoveredObject);
         }
@@ -267,7 +268,6 @@
     }
   });
 
-  // CLIQUE (POINTERUP)
   window.addEventListener('pointerup', (event) => {
     if (isDragging || event.target.closest('#info-panel')) return;
 
@@ -345,14 +345,12 @@
 
   document.getElementById('close-btn').addEventListener('click', resetToInitialPosition);
 
-  // RESIZE
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // LOOP DE ANIMAÇÃO
   function animate() {
     requestAnimationFrame(animate);
     controls.update();

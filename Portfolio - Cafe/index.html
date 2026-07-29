@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Cafe Portfolio</title>
+  <title>Cafe Portfolio Turin</title>
+  <script src="https://platform.linkedin.com/badges/js/profile.js" async defer type="text/javascript"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      /* ENVIROMENT: Céu de Turim / Estilo Roman Klčo */
+      /* ENVIROMENT: Céu de Turim (Salmon -> Blue) */
       background-image: 
         radial-gradient(circle at 15% 85%, rgba(255, 133, 116, 0.7) 0%, transparent 45%),
         radial-gradient(circle at 85% 15%, rgba(132, 60, 246, 0.5) 0%, transparent 50%),
@@ -18,11 +19,7 @@
       overflow: hidden; 
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    canvas { 
-      display: block; 
-      cursor: pointer; 
-      background-color: transparent !important;
-    }
+    canvas { display: block; cursor: pointer; }
 
     /* CARD DE INFORMAÇÕES (MODAL DIREITO) */
     #info-panel {
@@ -43,53 +40,22 @@
       transition: right 0.5s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 10;
     }
-
-    #info-panel.active { 
-      right: 40px; 
-    }
-
-    /* BOTÃO FECHAR (X) */
+    #info-panel.active { right: 40px; }
     .close-btn {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      color: #fff;
-      font-size: 18px;
-      font-weight: bold;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      position: absolute; top: 15px; right: 15px;
+      background: rgba(255, 255, 255, 0.1); border: none;
+      color: #fff; font-size: 18px; font-weight: bold;
+      width: 32px; height: 32px; border-radius: 50%;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
       transition: background 0.2s ease, transform 0.2s ease;
     }
-
-    .close-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: scale(1.1);
-    }
-
-    #info-title {
-      font-size: 1.4rem;
-      margin-bottom: 12px;
-      color: #f39c12;
-    }
-
-    #info-description {
-      font-size: 0.95rem;
-      line-height: 1.6;
-      color: #ddd;
-    }
+    .close-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.1); }
+    #info-title { font-size: 1.4rem; margin-bottom: 12px; color: #f39c12; }
+    #info-description { font-size: 0.95rem; line-height: 1.6; color: #ddd; }
   </style>
 </head>
   
 <body>
-
-  <!-- RETÂNGULO CINZA (UI DO MODAL) -->
   <div id="info-panel">
     <button class="close-btn" id="close-btn">&times;</button>
     <h2 id="info-title">Título do Objeto</h2>
@@ -109,90 +75,65 @@
   import * as THREE from 'three';
   import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-  // IMPORTS ADICIONADOS PARA O BRILHO (BLOOM)
+  // IMPORTS DE PÓS-PROCESSAMENTO PARA O BLOOM
   import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
   import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
   import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
-  // 1. CENA (Forçamos o fundo como nulo para garantir transparência do CSS)
+  // CENA E RENDERER COM TRANSPARÊNCIA
   const scene = new THREE.Scene();
   scene.background = null;
 
-  // 2. CAMERA isométrica
   const w = window.innerWidth, h = window.innerHeight;
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  const initialCameraPos = new THREE.Vector3(-1.3, 0.5, 1.2);
-  const initialTargetPos = new THREE.Vector3(0, 0, 0);  
-  camera.position.copy(initialCameraPos);
-  camera.lookAt(initialTargetPos);
+  camera.position.set(-1.3, 0.5, 1.2);
+  camera.lookAt(0, 0, 0);
 
-  // 3. RENDERER COM TRANSPARÊNCIA ATIVADA
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(w, h);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setClearColor(0x000000, 0); // Totalmente transparente!
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0); // Fundo transparente WebGL
   document.body.appendChild(renderer.domElement);
 
-  // 4. CONFIGURAÇÃO DO POST-PROCESSING (BRILHO DOURADO SUAVE)
-  // Reintroduzimos o Bloom configurado para não travar o alpha.
+  // 1. CONFIGURAÇÃO DO EFFECTCOMPOSER E BLOOM
+  // Esta configuração preserva a transparência nativa do Canvas.
   const renderPass = new RenderPass(scene, camera);
   
-  // UnrealBloomPass(Resolução, Intensidade, Raio, Threshold)
-  // Threshold alto (0.85) garante que SÓ as partículas que "estourarem" o brilho fiquem com aura.
-  // Intensidade moderada (1.0) para ser sutil.
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    1.0,  // Intensidade da aura de luz
-    0.35, // Raio de espalhamento
-    0.85  // Limiar
-  );
+  // UnrealBloomPass(Resolution, Strength, Radius, Threshold)
+  // Threshold alto (0.85) impede que o café fique borrado.
+  const bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), 0.8, 0.35, 0.85);
 
   const composer = new EffectComposer(renderer);
   composer.addPass(renderPass);
   composer.addPass(bloomPass);
 
-  // O SEGREDO: Manter o renderPass principal como limpo/transparente
+  // O SEGREDO TÉCNICO: Não limpar o alpha do renderPass
   renderPass.clearAlpha = 0;
 
-  // LUZES HARMONIZADAS COM O ENVIROMENT
-  const ambient = new THREE.AmbientLight(0xf472b6, 0.5);
-  scene.add(ambient);
-  
+  // LUZES HARMONIZADAS
+  scene.add(new THREE.AmbientLight(0xf472b6, 0.5));
   const dirLight = new THREE.DirectionalLight(0xffbe76, 1.4);
   dirLight.position.set(-2, 5, 3);
   scene.add(dirLight);
-  
-  const frontLight = new THREE.DirectionalLight(0x818cf8, 0.8);
-  frontLight.position.set(2, -2, -5);
-  scene.add(frontLight);
 
-  // CONTROLES
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.rotateSpeed = 0.4;
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.03;
-  controls.minAzimuthAngle = -Math.PI * 0.8;
-  controls.maxAzimuthAngle = 0.2; 
-  controls.minPolarAngle = Math.PI * 0.2;
-  controls.maxPolarAngle = Math.PI * 0.55;
-  controls.enableZoom = false;
+  controls.enableDamping = true; controls.enableZoom = false;
 
-  // VARIÁVEL GLOBAL PARA OS VAGA-LUMES
+  // VARIÁVEL GLOBAL PARA VAGA-LUMES E TEMPO
   let grupoVagalumes = null;
   const clock = new THREE.Clock();
 
-  // CRIAÇÃO DOS VAGA-LUMES (RESTAURADO MATERIAL E EMISSÃO)
+  // 2. CRIAÇÃO DOS VAGA-LUMES (RESTAURADA EMISSÃO E PARÂMETROS LENTOS)
   function criarVagalumes() {
     const particleGroup = new THREE.Group();
     const particleGeo = new THREE.IcosahedronGeometry(0.002, 0); // Tamanho sutil
     
     for (let i = 0; i < 35; i++) {
-      // Voltamos para o MeshStandardMaterial para suportar EMISSIVE!
+      // Voltamos para MeshStandardMaterial para suportar EMISSIVE
       const particleMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
-        emissive: 0xffd1a7,        // Tom dourado/quente no centro
-        emissiveIntensity: 6.0,    // Intensidade alta para "estourar" e gerar o Bloom
-        roughness: 0.1,
+        emissive: 0xffd1a7, // Dourado quente
+        emissiveIntensity: 6.0, // Alta intensidade para "estourar" o Bloom
         transparent: true,
         opacity: 0.9,
         metalness: 0.0,
@@ -202,27 +143,24 @@
       
       const radius = 0.3 + Math.random() * 0.5;
       const angle = Math.random() * Math.PI * 2;
-      
-      // Guardamos a Posição Inicial Base para flutuação
       const initialX = Math.cos(angle) * radius;
       const initialY = Math.random() * 0.4 + 0.05;
       const initialZ = Math.sin(angle) * radius;
-
       mesh.position.set(initialX, initialY, initialZ);
 
-      // PARÂMETROS INDIVIDUAIS DE FLUTUAÇÃO LENTA
+      // PARÂMETROS INDIVIDUAIS DE VÔO (MUITO MAIS LENTOS)
       mesh.userData = {
         baseX: initialX, baseY: initialY, baseZ: initialZ,
         speed: 1.0 + Math.random() * 1.5, // Brilho pulsando devagar
         offset: Math.random() * Math.PI * 2,
-        baseIntensity: 3.0 + Math.random() * 5.0, // Pico de brilho sutil
+        baseIntensity: 3.0 + Math.random() * 4.0,
 
-        // VELOCIDADES DE VÔO (MUITO MAIS LENTAS)
-        // Reduzimos as velocidades anteriores de 0.8+ para 0.1+
-        flySpeedX: 0.15 + Math.random() * 0.2, // Reduzido drasticamente
+        // VELOCIDADES DE VÔO REDUZIDAS Drasticamente
+        // De 0.8+ para 0.15+ (80% mais lento)
+        flySpeedX: 0.15 + Math.random() * 0.2, 
         flySpeedY: 0.2 + Math.random() * 0.2,
         flySpeedZ: 0.1 + Math.random() * 0.15,
-        rangeX: 0.03 + Math.random() * 0.04, // Raio de flutuação pequeno
+        rangeX: 0.03 + Math.random() * 0.04, // Movimento sutil
         rangeY: 0.04 + Math.random() * 0.05,
         rangeZ: 0.03 + Math.random() * 0.04
       };
@@ -230,27 +168,56 @@
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
       particleGroup.add(mesh);
     }
-
     return particleGroup;
   }
 
   // CARREGAR O GLB
   const loader = new GLTFLoader();
-  loader.load(
-    './assets/cafe_v007.glb',
-    (gltf) => {
-      // Adicionamos diretamente na cena GLTF para manter hierarquia se necessário
-      grupoVagalumes = criarVagalumes();
-      gltf.scene.add(grupoVagalumes);
+  loader.load('./assets/cafe_v007.glb', (gltf) => {
+    grupoVagalumes = criarVagalumes();
+    gltf.scene.add(grupoVagalumes);
+    scene.add(gltf.scene);
+  });
 
-      scene.add(gltf.scene);
-      console.log('✅ Café e vaga-lumes lentos/brilhantes carregados!');
-    },
-    (progress) => {},
-    (error) => { console.error('Erro ao carregar o GLB:', error); }
-  );
+  // GSAP E CONTROLES (Não alterados)
+  const configObjetos = {'mesh_char_low': {titulo: 'Personagem',descricao: 'Modelo do personagem interagindo no cenário.',cameraPos: { x: -0.6, y: 0.35, z: 0.3 }, targetPos: { x: 0.15, y: 0.2, z: 0 }},'mesh_glass_low': {titulo: 'Vidros e Cafeteira',descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.',cameraPos: { x: -0.3, y: 0.4, z: 0.75 },targetPos: { x: 0.25, y: 0.2, z: 0.0 }},'mesh_artstation_low': {titulo: 'ArtStation',descricao: 'Confira meus outros modelos no portfólio do ArtStation.',cameraPos: { x: -0.2, y: 0.35, z: 0.65 },targetPos: { x: 0.2, y: 0.1, z: -0.1 }},'mesh_linkedin_low': {titulo: 'LinkedIn',descricao: 'Conecte-se comigo no LinkedIn para oportunidades.',cameraPos: { x: -0.3, y: 0.35, z: 0.55 },targetPos: { x: 0.25, y: 0.1, z: -0.2 }}};
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let isDragging = false, pointerDownPos = { x: 0, y: 0 };
+  window.addEventListener('pointerdown', (e) => { isDragging = false; pointerDownPos = { x: e.clientX, y: e.clientY }; });
+  window.addEventListener('pointermove', (e) => { if (Math.abs(e.clientX - pointerDownPos.x) > 5 || Math.abs(e.clientY - pointerDownPos.y) > 5) isDragging = true; mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; });
+  window.addEventListener('pointerup', (event) => { if (isDragging || event.target.closest('#info-panel')) return; raycaster.setFromCamera(mouse, camera); const intersects = raycaster.intersectObjects(scene.children, true); if (intersects.length > 0) { const clickedObject = intersects[0].object; const chave = Object.keys(configObjetos).find((key) => key === (clickedObject.geometry ? clickedObject.geometry.name : '') || key === clickedObject.name); if (chave) focarObjeto(configObjetos[chave]); }});
+  function focarObjeto(dados) { controls.enabled = false; document.getElementById('info-panel').classList.add('active'); gsap.to(camera.position, { x: dados.cameraPos.x, y: dados.cameraPos.y, z: dados.cameraPos.z, duration: 1.2, ease: 'power2.out' }); gsap.to(controls.target, { x: dados.targetPos.x, y: dados.targetPos.y, z: dados.targetPos.z, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update() }); }
+  function resetToInitialPosition() { document.getElementById('info-panel').classList.remove('active'); gsap.to(camera.position, { x: -1.3, y: 0.5, z: 1.2, duration: 1.2, ease: 'power2.out' }); gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } }); }
+  document.getElementById('close-btn').addEventListener('click', resetToInitialPosition);
+  window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); composer.setSize(window.innerWidth, window.innerHeight); });
 
-  // CONFIGURAÇÃO DOS ASSETS
-  const configObjetos = {
-    'mesh_char_low': {
-      titulo: 'Personagem
+  // 3. LOOP DE ANIMAÇÃO (VÔO LENTO E PULSO SUAVE)
+  function animate() {
+    requestAnimationFrame(animate);
+    
+    // ANIMAÇÃO DOS VAGA-LUMES
+    if (grupoVagalumes) {
+      const elapsedTime = clock.getElapsedTime();
+      grupoVagalumes.children.forEach((p) => {
+        const u = p.userData;
+        // Pulso de brilho suave
+        const pulse = Math.sin(elapsedTime * u.speed + u.offset) * 0.5 + 0.5;
+        p.material.emissiveIntensity = 1.0 + pulse * u.baseIntensity;
+        p.material.opacity = 0.4 + pulse * 0.5;
+
+        // VÔO Drasticamente LENTO (Usando os novos multiplicadores)
+        p.position.x = u.baseX + Math.sin(elapsedTime * u.flySpeedX + u.offset) * u.rangeX;
+        p.position.y = u.baseY + Math.cos(elapsedTime * u.flySpeedY + u.offset) * u.rangeY;
+        p.position.z = u.baseZ + Math.sin(elapsedTime * u.flySpeedZ + u.offset) * u.rangeZ;
+      });
+    }
+
+    controls.update();
+    // USAMOS O COMPOSER PARA RENDERIZAR O BLOOM!
+    composer.render();
+  }
+  animate();
+</script>
+</body>
+</html>

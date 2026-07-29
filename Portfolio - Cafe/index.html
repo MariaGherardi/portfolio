@@ -19,7 +19,13 @@
       overflow: hidden; 
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    canvas { display: block; cursor: pointer; }
+
+    /* O SEGREDO DO GLOW SEM APAGAR O FUNDO: Filtro CSS no próprio Canvas */
+    canvas { 
+      display: block; 
+      cursor: pointer; 
+      filter: drop-shadow(0 0 10px rgba(255, 230, 180, 0.35));
+    }
 
     /* CARD DE INFORMAÇÕES (MODAL DIREITO) */
     #info-panel {
@@ -106,9 +112,6 @@
   import * as THREE from 'three';
   import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 
   // CENA
   const scene = new THREE.Scene();
@@ -121,33 +124,12 @@
   camera.position.copy(initialCameraPos);
   camera.lookAt(initialTargetPos);
 
-  // RENDERER (Com alpha)
+  // RENDERER COM TRANSPARÊNCIA PERFEITA
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setClearColor(0x000000, 0); // Transparente
+  renderer.setClearColor(0x000000, 0); // Transparente ativado!
   document.body.appendChild(renderer.domElement);
-
-  // -------------------------------------------------------------
-  // CONFIGURAÇÃO DO POST-PROCESSING (BLOOM / GLOW COM TRANSPARÊNCIA)
-  // -------------------------------------------------------------
-  const renderScene = new RenderPass(scene, camera);
-
-  // Reduzimos a intensidade do Bloom de 1.5 para 0.6 (BRILHO MAIS SUAVE)
-  const bloomPass = new UnrealBloomPass(
-    new THREE.Vector2(window.innerWidth, window.innerHeight),
-    0.6,  // Intensidade suave da aura de luz
-    0.3,  // Raio de espalhamento
-    0.85  // Limiar
-  );
-
-  const composer = new EffectComposer(renderer);
-  composer.addPass(renderScene);
-  composer.addPass(bloomPass);
-
-  // O SEGREDO PARA MANTER O FUNDO CSS VISÍVEL COM O BLOOM ATIVADO:
-  renderScene.clearColor = new THREE.Color(0x000000);
-  renderScene.clearAlpha = 0;
 
   // LUZES HARMONIZADAS COM O ENVIROMENT
   const ambient = new THREE.AmbientLight(0xf472b6, 0.5);
@@ -176,17 +158,17 @@
   let grupoVagalumes = null;
   const clock = new THREE.Clock();
 
-  // CRIAÇÃO DOS VAGA-LUMES (TAMANHO MENOR E BRILHO SUAVE)
+  // CRIAÇÃO DOS VAGA-LUMES (TAMANHO DELICADO)
   function criarVagalumes() {
     const particleGroup = new THREE.Group();
-    // TAMANHO REDUZIDO: de 0.003 para 0.0018 (poeira minúscula!)
+    // Geometria bem pequena para parecer poeira
     const particleGeo = new THREE.IcosahedronGeometry(0.0018, 0);
     
     for (let i = 0; i < 30; i++) {
       const particleMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
         emissive: 0xffd1a7,
-        emissiveIntensity: 2.5,  // Intensidade controlada
+        emissiveIntensity: 3.0,
         roughness: 0.1,
         transparent: true,
         opacity: 0.8
@@ -206,7 +188,7 @@
       mesh.userData = {
         speed: 1.5 + Math.random() * 2.5,
         offset: Math.random() * Math.PI * 2,
-        baseIntensity: 1.5 + Math.random() * 2.5 // Pico de iluminação suave
+        baseIntensity: 2.0 + Math.random() * 3.0
       };
 
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
@@ -225,7 +207,7 @@
       gltf.scene.add(grupoVagalumes);
 
       scene.add(gltf.scene);
-      console.log('✅ Café e vaga-lumes suavemente iluminados!');
+      console.log('✅ Café e vaga-lumes carregados com sucesso!');
     },
     (progress) => {},
     (error) => { console.error('Erro ao carregar o GLB:', error); }
@@ -382,13 +364,12 @@
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
   });
 
   function animate() {
     requestAnimationFrame(animate);
     
-    // ANIMAÇÃO DOS VAGA-LUMES (Pulsar delicado)
+    // ANIMAÇÃO DOS VAGA-LUMES
     if (grupoVagalumes) {
       const elapsedTime = clock.getElapsedTime();
       
@@ -401,7 +382,7 @@
     }
 
     controls.update();
-    composer.render();
+    renderer.render(scene, camera);
   }
   animate();
 

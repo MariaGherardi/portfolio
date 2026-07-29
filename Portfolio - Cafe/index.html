@@ -1,247 +1,325 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Café Diorama 3D - Estilo Roman Klčo</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cafe Portfolio</title>
+  <script src="https://platform.linkedin.com/badges/js/profile.js" async defer type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body, html {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      /* 
-        GRADIENTE DIRECIONAL (ESTILO ROMAN KLČO / CÉU DE TURIM):
-        1. Rosa Salmão no canto inferior esquerdo (Luz do Pôr do Sol)
-        2. Roxo/Violeta sutil no canto superior direito (Transição Noturna)
-        3. Fundo Base: Azul Cerúleo / Céu Suave
-      */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      /* ENVIROMENT: Céu de Turim / Estilo Roman Klčo */
       background-image: 
         radial-gradient(circle at 15% 85%, rgba(255, 133, 116, 0.55) 0%, transparent 45%),
         radial-gradient(circle at 85% 15%, rgba(132, 60, 246, 0.35) 0%, transparent 50%),
         linear-gradient(to top, #abdbe3 0%, #e0f2fe 100%);
       background-attachment: fixed;
+      overflow: hidden; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    canvas { display: block; cursor: pointer; }
+
+    /* CARD DE INFORMAÇÕES (MODAL DIREITO) */
+    #info-panel {
+      position: absolute;
+      top: 50%;
+      right: -450px; /* Escondido por padrão fora da tela */
+      transform: translateY(-50%);
+      width: 380px;
+      max-width: 85vw;
+      background: rgba(35, 35, 35, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 30px;
+      color: #ffffff;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      transition: right 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 10;
     }
 
-    #webgl {
+    #info-panel.active { 
+      right: 40px; 
+    }
+
+    /* BOTÃO FECHAR (X) */
+    .close-btn {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      outline: none;
+      top: 15px;
+      right: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: scale(1.1);
+    }
+
+    #info-title {
+      font-size: 1.4rem;
+      margin-bottom: 12px;
+      color: #f39c12;
+    }
+
+    #info-description {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #ddd;
     }
   </style>
-  <!-- Three.js CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- OrbitControls -->
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
+  
 <body>
 
-  <canvas id="webgl"></canvas>
+  <!-- RETÂNGULO CINZA (UI DO MODAL) -->
+  <div id="info-panel">
+    <button class="close-btn" id="close-btn">&times;</button>
+    <h2 id="info-title">Título do Objeto</h2>
+    <p id="info-description">Descrição do asset selecionado...</p>
+  </div>
 
-  <script>
-    // -------------------------------------------------------------
-    // 1. CENA, CÂMERA E RENDERER COM TRANSPARÊNCIA
-    // -------------------------------------------------------------
-    const canvas = document.querySelector('#webgl');
-    const scene = new THREE.Scene();
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
 
-    const camera = new THREE.PerspectiveCamera(
-      45, 
-      window.innerWidth / window.innerHeight, 
-      0.1, 
-      1000
-    );
-    // Posição Isométrica clássica de diorama
-    camera.position.set(10, 8, 12);
+<script type="module">
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    const renderer = new THREE.WebGLRenderer({ 
-      canvas: canvas, 
-      antialias: true, 
-      alpha: true // OBRIGATÓRIO: Permite ver o gradiente CSS no fundo!
+  // CENA (Transparente para exibir o environment no fundo CSS)
+  const scene = new THREE.Scene();
+
+  // CAMERA isométrica
+  const w = window.innerWidth, h = window.innerHeight;
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
+  const initialCameraPos = new THREE.Vector3(-1.3, 0.5, 1.2);
+  const initialTargetPos = new THREE.Vector3(0, 0, 0);  
+  camera.position.copy(initialCameraPos);
+  camera.lookAt(initialTargetPos);
+
+  // RENDERER (Com alpha ativado)
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setClearColor(0x000000, 0);
+  document.body.appendChild(renderer.domElement);
+
+  // LUZES HARMONIZADAS COM O ENVIROMENT
+  const ambient = new THREE.AmbientLight(0xf472b6, 0.5); // Luz de preenchimento suave rosada
+  scene.add(ambient);
+  
+  const dirLight = new THREE.DirectionalLight(0xffbe76, 1.4); // Sol morno vindo do canto salmão
+  dirLight.position.set(-2, 5, 3);
+  scene.add(dirLight);
+  
+  const frontLight = new THREE.DirectionalLight(0x818cf8, 0.8); // Rebatedor frio vindo do canto violeta
+  frontLight.position.set(2, -2, -5);
+  scene.add(frontLight);
+
+  // CONTROLES
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.rotateSpeed = 0.4;
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.03;
+  controls.minAzimuthAngle = -Math.PI * 0.8;
+  controls.maxAzimuthAngle = 0.2; 
+  controls.minPolarAngle = Math.PI * 0.2;
+  controls.maxPolarAngle = Math.PI * 0.55;
+  controls.enableZoom = false;
+
+  // CARREGAR O GLB
+  const loader = new GLTFLoader();
+  loader.load(
+    './assets/cafe_v007.glb',
+    (gltf) => {
+      scene.add(gltf.scene);
+      console.log('✅ Café carregado com sucesso!');
+    },
+    (progress) => {},
+    (error) => { console.error('Erro ao carregar o GLB:', error); }
+  );
+
+  // CONFIGURAÇÃO DOS ASSETS
+  const configObjetos = {
+    'mesh_char_low': {
+      titulo: 'Personagem',
+      descricao: 'Modelo do personagem interagindo no cenário.',
+      cameraPos: { x: -0.6, y: 0.35, z: 0.3 }, 
+      targetPos: { x: 0.15, y: 0.2, z: 0 }
+    },
+    'mesh_glass_low': {
+      titulo: 'Vidros e Cafeteira',
+      descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.',
+      cameraPos: { x: -0.3, y: 0.4, z: 0.75 },
+      targetPos: { x: 0.25, y: 0.2, z: 0.0 }
+    },
+    'mesh_artstation_low': {
+      titulo: 'ArtStation',
+      descricao: 'Confira meus outros modelos no portfólio do ArtStation.',
+      cameraPos: { x: -0.2, y: 0.35, z: 0.65 },
+      targetPos: { x: 0.2, y: 0.1, z: -0.1 }
+    },
+    'mesh_linkedin_low': {
+      titulo: 'LinkedIn',
+      descricao: 'Conecte-se comigo no LinkedIn para oportunidades.',
+      cameraPos: { x: -0.3, y: 0.35, z: 0.55 },
+      targetPos: { x: 0.25, y: 0.1, z: -0.2 }
+    }
+  };
+
+  // RAYCASTING E EVENTOS
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let isZoomedIn = false;
+  let isDragging = false;
+  let pointerDownPos = { x: 0, y: 0 };
+
+  window.addEventListener('pointerdown', (e) => {
+    isDragging = false;
+    pointerDownPos = { x: e.clientX, y: e.clientY };
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (Math.abs(e.clientX - pointerDownPos.x) > 5 || Math.abs(e.clientY - pointerDownPos.y) > 5) {
+      isDragging = true;
+    }
+
+    mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    if (intersects.length > 0) {
+      const hoveredObject = intersects[0].object;
+      const meshName = hoveredObject.geometry ? hoveredObject.geometry.name : '';
+      const objectName = hoveredObject.name;
+
+      const chave = Object.keys(configObjetos).find(
+        (key) => key === meshName || key === objectName
+      );
+
+      if (chave) {
+        renderer.domElement.style.cursor = 'pointer';
+      } else {
+        renderer.domElement.style.cursor = 'default';
+      }
+    } else {
+      renderer.domElement.style.cursor = 'default';
+    }
+  });
+
+  window.addEventListener('pointerup', (event) => {
+    if (isDragging || event.target.closest('#info-panel')) return;
+
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    if (intersects.length > 0) {
+      const clickedObject = intersects[0].object;
+      const meshName = clickedObject.geometry ? clickedObject.geometry.name : '';
+      const objectName = clickedObject.name;
+
+      const chave = Object.keys(configObjetos).find(
+        (key) => key === meshName || key === objectName
+      );
+
+      if (chave) {
+        focarObjeto(configObjetos[chave]);
+      }
+    }
+  });
+
+  function focarObjeto(dados) {
+    isZoomedIn = true;
+    controls.enabled = false;
+
+    document.getElementById('info-title').innerText = dados.titulo;
+    document.getElementById('info-description').innerText = dados.descricao;
+    document.getElementById('info-panel').classList.add('active');
+
+    gsap.to(camera.position, {
+      x: dados.cameraPos.x,
+      y: dados.cameraPos.y,
+      z: dados.cameraPos.z,
+      duration: 1.2,
+      ease: 'power2.out'
     });
+
+    gsap.to(controls.target, {
+      x: dados.targetPos.x,
+      y: dados.targetPos.y,
+      z: dados.targetPos.z,
+      duration: 1.2,
+      ease: 'power2.out',
+      onUpdate: () => controls.update()
+    });
+  }
+
+  function resetToInitialPosition() {
+    document.getElementById('info-panel').classList.remove('active');
+
+    gsap.to(camera.position, {
+      x: initialCameraPos.x,
+      y: initialCameraPos.y,
+      z: initialCameraPos.z,
+      duration: 1.2,
+      ease: 'power2.out'
+    });
+
+    gsap.to(controls.target, {
+      x: initialTargetPos.x,
+      y: initialTargetPos.y,
+      z: initialTargetPos.z,
+      duration: 1.2,
+      ease: 'power2.out',
+      onUpdate: () => controls.update(),
+      onComplete: () => {
+        isZoomedIn = false;
+        controls.enabled = true;
+      }
+    });
+  }
+
+  document.getElementById('close-btn').addEventListener('click', resetToInitialPosition);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setClearColor(0x000000, 0); // 100% Transparente
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  });
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+  function animate() {
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  animate();
 
-    // -------------------------------------------------------------
-    // 2. SISTEMA DE ILUMINAÇÃO (AMARRAÇÃO COM O BACKGROUND)
-    // -------------------------------------------------------------
-
-    // A) Luz Ambiente (Ligeiramente magenta/rosada para harmonizar)
-    const ambientLight = new THREE.AmbientLight(0xf472b6, 0.4);
-    scene.add(ambientLight);
-
-    // B) Luz Direcional Principal (SOL QUENTE)
-    // Vindo da ESQUERDA/BAIXO para bater exatamente onde o gradiente Salmão está no CSS!
-    const sunLight = new THREE.DirectionalLight(0xffbe76, 1.8);
-    sunLight.position.set(-8, 10, 6); // Origem: Canto inferior/frente esquerdo
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.bias = -0.001;
-    scene.add(sunLight);
-
-    // C) Luz de Rebatimento / Preenchimento Frio (SOMBRAS AZULADAS/ROXAS)
-    // Vindo da DIREITA/ATRÁS (canto escuro do céu)
-    const bounceLight = new THREE.DirectionalLight(0x818cf8, 0.8);
-    bounceLight.position.set(8, -2, -6);
-    scene.add(bounceLight);
-
-    // -------------------------------------------------------------
-    // 3. DIORAMA BASE (BASE DE PEDRA + ESTRUTURA DO CAFÉ EM L)
-    // -------------------------------------------------------------
-    const dioramaGroup = new THREE.Group();
-
-    // Chão / Fatia de Terra
-    const baseGeo = new THREE.CylinderGeometry(4, 4.2, 1, 8);
-    const baseMat = new THREE.MeshStandardMaterial({ 
-      color: 0x64748b, 
-      roughness: 0.8 
-    });
-    const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.y = -0.5;
-    baseMesh.receiveShadow = true;
-    dioramaGroup.add(baseMesh);
-
-    // Piso de Madeira do Café
-    const floorGeo = new THREE.BoxGeometry(5, 0.2, 5);
-    const floorMat = new THREE.MeshStandardMaterial({ 
-      color: 0xb45309, 
-      roughness: 0.4 
-    });
-    const floorMesh = new THREE.Mesh(floorGeo, floorMat);
-    floorMesh.position.y = 0.1;
-    floorMesh.receiveShadow = true;
-    floorMesh.castShadow = true;
-    dioramaGroup.add(floorMesh);
-
-    // Paredes do Canto (Estrutura em L)
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.7 });
-    
-    // Parede Fundo
-    const wallBack = new THREE.Mesh(new THREE.BoxGeometry(5, 3, 0.2), wallMat);
-    wallBack.position.set(0, 1.6, -2.4);
-    wallBack.castShadow = true;
-    wallBack.receiveShadow = true;
-    dioramaGroup.add(wallBack);
-
-    // Parede Esquerda
-    const wallLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3, 5), wallMat);
-    wallLeft.position.set(-2.4, 1.6, 0);
-    wallLeft.castShadow = true;
-    wallLeft.receiveShadow = true;
-    dioramaGroup.add(wallLeft);
-
-    // -------------------------------------------------------------
-    // 4. O VIDRO FUTURISTA + HOLOGRAMA (EXEMPLO)
-    // -------------------------------------------------------------
-    const glassGroup = new THREE.Group();
-
-    // Vidro Escuro Translúcido
-    const glassGeo = new THREE.PlaneGeometry(1.8, 2.5);
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x0f172a,
-      transparent: true,
-      opacity: 0.4,
-      transmission: 0.6,
-      roughness: 0.1,
-      ior: 1.5,
-      side: THREE.DoubleSide
-    });
-    const glassMesh = new THREE.Mesh(glassGeo, glassMat);
-    glassGroup.add(glassMesh);
-
-    // Interface Holográfica Emissiva (Ciano Néon)
-    const hologramGeo = new THREE.PlaneGeometry(1.4, 0.8);
-    const hologramMat = new THREE.MeshStandardMaterial({
-      color: 0x000000,
-      emissive: new THREE.Color(0x06b6d4), // Ciano Brilhante
-      emissiveIntensity: 2.5,
-      transparent: true,
-      opacity: 0.85,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide
-    });
-    const hologramMesh = new THREE.Mesh(hologramGeo, hologramMat);
-    hologramMesh.position.z = 0.01; // Levemente à frente do vidro
-    glassGroup.add(hologramMesh);
-
-    glassGroup.position.set(1.2, 1.4, 1);
-    glassGroup.rotation.y = -Math.PI / 6;
-    dioramaGroup.add(glassGroup);
-
-    scene.add(dioramaGroup);
-
-    // -------------------------------------------------------------
-    // 5. PARTÍCULAS AMBIENTAIS (POEIRA DOURADA NO AR)
-    // -------------------------------------------------------------
-    const particleCount = 70;
-    const particleGeo = new THREE.BufferGeometry();
-    const particlePos = new Float32Array(particleCount * 3);
-
-    for (let i = 0; i < particleCount * 3; i += 3) {
-      particlePos[i] = (Math.random() - 0.5) * 12;
-      particlePos[i + 1] = Math.random() * 8;
-      particlePos[i + 2] = (Math.random() - 0.5) * 12;
-    }
-
-    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
-
-    const particleMat = new THREE.PointsMaterial({
-      color: 0xfef08a, // Amarelo suave/dourado
-      size: 0.06,
-      transparent: true,
-      opacity: 0.7,
-      blending: THREE.AdditiveBlending
-    });
-
-    const particles = new THREE.Points(particleGeo, particleMat);
-    scene.add(particles);
-
-    // -------------------------------------------------------------
-    // 6. LOOP DE ANIMAÇÃO (IDLE ROTATION + RENDER)
-    // -------------------------------------------------------------
-    const clock = new THREE.Clock();
-
-    function animate() {
-      requestAnimationFrame(animate);
-
-      const elapsedTime = clock.getElapsedTime();
-
-      // Rotação Lenta e Suave do Diorama (Atmosfera "Viva")
-      dioramaGroup.rotation.y = Math.sin(elapsedTime * 0.2) * 0.15;
-
-      // Animação leve das partículas flutuando
-      particles.rotation.y = elapsedTime * 0.02;
-
-      controls.update();
-      renderer.render(scene, camera);
-    }
-
-    animate();
-
-    // -------------------------------------------------------------
-    // 7. RESPONSIVIDADE
-    // -------------------------------------------------------------
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-  </script>
+</script>
 </body>
 </html>

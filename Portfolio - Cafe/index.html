@@ -151,7 +151,7 @@
   // CRIAÇÃO DAS PARTÍCULAS FIXAS (30 Geometrias suaves concentradas na mesh)
   function criarParticulasFixas() {
     const particleGroup = new THREE.Group();
-    const particleGeo = new THREE.IcosahedronGeometry(0.003, 0); // Pequenas partículas 3D
+    const particleGeo = new THREE.IcosahedronGeometry(0.0015, 0); // Pequenas partículas 3D
     
     const particleMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,          // branco

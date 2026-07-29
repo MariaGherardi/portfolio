@@ -142,9 +142,9 @@
   const grupoVagalumes = new THREE.Group();
   scene.add(grupoVagalumes);
 
-  const particleGeo = new THREE.IcosahedronGeometry(0.002, 0);
+  const particleGeo = new THREE.IcosahedronGeometry(0.0005, 0);
 
-  for (let i = 0; i < 35; i++) {
+  for (let i = 0; i < 15; i++) {
     // Ponto Central do Vaga-lume
     const particleMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const mesh = new THREE.Mesh(particleGeo, particleMat);
@@ -157,7 +157,7 @@
       opacity: 0.85
     });
     const glowSprite = new THREE.Sprite(spriteMat);
-    glowSprite.scale.set(0.035, 0.035, 1.0); // Tamanho da aura dourada
+    glowSprite.scale.set(0.025, 0.025, 1.0); // Tamanho da aura dourada
     mesh.add(glowSprite); // Anexa a aura ao ponto!
 
     // Posição Inicial

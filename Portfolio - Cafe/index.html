@@ -148,13 +148,51 @@
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;
 
+  // CRIAÇÃO DAS PARTÍCULAS FIXAS (30 Geometrias suaves concentradas na mesh)
+  function criarParticulasFixas() {
+    const particleGroup = new THREE.Group();
+    const particleGeo = new THREE.IcosahedronGeometry(0.008, 0); // Pequenas partículas 3D
+    
+    const particleMat = new THREE.MeshStandardMaterial({
+      color: 0xffe3d8,          // Cor base quente
+      emissive: 0xff8574,       // Emissivo rosado suave
+      emissiveIntensity: 0.35,  // Intensidade baixa para não estourar a iluminação
+      roughness: 0.5
+    });
+
+    for (let i = 0; i < 30; i++) {
+      const mesh = new THREE.Mesh(particleGeo, particleMat);
+      
+      // Distribuição concentrada ao redor do centro da mesh do café
+      const radius = 0.3 + Math.random() * 0.5; // Distância do centro
+      const angle = Math.random() * Math.PI * 2;
+      
+      mesh.position.set(
+        Math.cos(angle) * radius,
+        Math.random() * 0.4 + 0.05, // Flutuando próximo ao chão do café
+        Math.sin(angle) * radius
+      );
+
+      // Rotação aleatória para cada geocubo reagir diferente às luzes
+      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+      
+      particleGroup.add(mesh);
+    }
+
+    return particleGroup;
+  }
+
   // CARREGAR O GLB
   const loader = new GLTFLoader();
   loader.load(
     './assets/cafe_v007.glb',
     (gltf) => {
+      // Adicionamos as partículas diretamente COMO FILHAS da cena do GLB
+      const particulas = criarParticulasFixas();
+      gltf.scene.add(particulas);
+
       scene.add(gltf.scene);
-      console.log('✅ Café carregado com sucesso!');
+      console.log('✅ Café e partículas fixas carregados com sucesso!');
     },
     (progress) => {},
     (error) => { console.error('Erro ao carregar o GLB:', error); }

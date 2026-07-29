@@ -1,29 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cafe Portfolio</title>
-  <script src="https://platform.linkedin.com/badges/js/profile.js" async defer type="text/javascript"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      /* ENVIROMENT: Céu de Turim / Estilo Roman Klčo */
-      background-image: 
-        radial-gradient(circle at 15% 85%, rgba(255, 133, 116, 0.55) 0%, transparent 45%),
-        radial-gradient(circle at 85% 15%, rgba(132, 60, 246, 0.35) 0%, transparent 50%),
-        linear-gradient(to top, #abdbe3 0%, #e0f2fe 100%) !important;
-      background-attachment: fixed;
-      overflow: hidden; 
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+
+    /* 1. GARANTIR ALTURA TOTAL DA TELA PARA O GRADIENTE EXIBIR */
+    html, body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
+    body { 
+      /* ESTILO DO GRADIENTE */
+      background: 
+        radial-gradient(circle at 15% 85%, rgba(255, 133, 116, 0.6) 0%, transparent 45%),
+        radial-gradient(circle at 85% 15%, rgba(132, 60, 246, 0.4) 0%, transparent 50%),
+        linear-gradient(to top, #abdbe3 0%, #e0f2fe 100%) !important;
+      background-attachment: fixed;
+    }
+
+    /* 2. FORÇAR CANVAS TRANSPARENTE SEM SOBREPOR O FUNDO */
     canvas { 
       display: block; 
+      width: 100vw !important;
+      height: 100vh !important;
+      background-color: transparent !important;
       cursor: pointer; 
-      filter: drop-shadow(0 0 8px rgba(255, 230, 180, 0.4));
     }
 
     /* CARD DE INFORMAÇÕES (MODAL DIREITO) */
@@ -50,7 +63,6 @@
       right: 40px; 
     }
 
-    /* BOTÃO FECHAR (X) */
     .close-btn {
       position: absolute;
       top: 15px;
@@ -91,7 +103,6 @@
   
 <body>
 
-  <!-- RETÂNGULO CINZA (UI DO MODAL) -->
   <div id="info-panel">
     <button class="close-btn" id="close-btn">&times;</button>
     <h2 id="info-title">Título do Objeto</h2>
@@ -112,11 +123,10 @@
   import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
   import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-  // CENA (Forçamos o fundo como nulo para garantir transparência do CSS)
+  // 1. CENA TRANSPARENTE
   const scene = new THREE.Scene();
-  scene.background = null;
 
-  // CAMERA isométrica
+  // 2. CÂMERA
   const w = window.innerWidth, h = window.innerHeight;
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
   const initialCameraPos = new THREE.Vector3(-1.3, 0.5, 1.2);
@@ -124,15 +134,16 @@
   camera.position.copy(initialCameraPos);
   camera.lookAt(initialTargetPos);
 
-  // RENDERER COM TRANSPARÊNCIA GARANTIDA
+  // 3. RENDERIZADOR CONFIGURADO PARA TRANSPARÊNCIA
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(w, h);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setClearColor(0x000000, 0); // Totalmente transparente!
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0); // Alfa totalmente limpo
+  renderer.toneMapping = THREE.NoToneMapping; // Desativa mapas que afetam a transparência
   document.body.appendChild(renderer.domElement);
 
-  // LUZES HARMONIZADAS COM O ENVIROMENT
-  const ambient = new THREE.AmbientLight(0xf472b6, 0.5);
+  // LUZES
+  const ambient = new THREE.AmbientLight(0xf472b6, 0.6);
   scene.add(ambient);
   
   const dirLight = new THREE.DirectionalLight(0xffbe76, 1.4);
@@ -154,76 +165,55 @@
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;
 
-  // VARIÁVEL GLOBAL PARA OS VAGA-LUMES
-  let grupoVagalumes = null;
+  // 4. CRIAÇÃO DAS PARTÍCULAS DIRETAMENTE NA CENA (INDEPENDENTE DO GLTF)
   const clock = new THREE.Clock();
+  const grupoVagalumes = new THREE.Group();
+  scene.add(grupoVagalumes); // Adicionado diretamente à cena principal
 
-  // CRIAÇÃO DOS VAGA-LUMES (POSIÇÕES + PARÂMETROS DE VÔO)
-  function criarVagalumes() {
-    const particleGroup = new THREE.Group();
-    const particleGeo = new THREE.IcosahedronGeometry(0.0018, 0);
+  const particleGeo = new THREE.IcosahedronGeometry(0.002, 0);
+
+  for (let i = 0; i < 35; i++) {
+    const particleMat = new THREE.MeshBasicMaterial({
+      color: 0xffe2b3,
+      transparent: true,
+      opacity: 0.85
+    });
+
+    const mesh = new THREE.Mesh(particleGeo, particleMat);
     
-    for (let i = 0; i < 30; i++) {
-      const particleMat = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        emissive: 0xffd1a7,
-        emissiveIntensity: 3.0,
-        roughness: 0.1,
-        transparent: true,
-        opacity: 0.8
-      });
+    // Posições base espalhadas
+    const radius = 0.2 + Math.random() * 0.6;
+    const angle = Math.random() * Math.PI * 2;
+    const baseX = Math.cos(angle) * radius;
+    const baseY = Math.random() * 0.5 + 0.05;
+    const baseZ = Math.sin(angle) * radius;
 
-      const mesh = new THREE.Mesh(particleGeo, particleMat);
-      
-      const radius = 0.3 + Math.random() * 0.5;
-      const angle = Math.random() * Math.PI * 2;
-      
-      // Guardamos a Posição Inicial Original (Base para a flutuação)
-      const initialX = Math.cos(angle) * radius;
-      const initialY = Math.random() * 0.4 + 0.05;
-      const initialZ = Math.sin(angle) * radius;
+    mesh.position.set(baseX, baseY, baseZ);
 
-      mesh.position.set(initialX, initialY, initialZ);
+    // Parâmetros de vôo armazenados em cada partícula
+    mesh.userData = {
+      baseX, baseY, baseZ,
+      speedX: 0.5 + Math.random() * 0.8,
+      speedY: 0.8 + Math.random() * 1.0,
+      speedZ: 0.6 + Math.random() * 0.8,
+      rangeX: 0.05 + Math.random() * 0.05,
+      rangeY: 0.06 + Math.random() * 0.06,
+      rangeZ: 0.05 + Math.random() * 0.05,
+      offset: Math.random() * Math.PI * 2
+    };
 
-      // PARÂMETROS INDIVIDUAIS DE PISCAR E VÔO (userData)
-      mesh.userData = {
-        // Posição base
-        baseX: initialX,
-        baseY: initialY,
-        baseZ: initialZ,
-        // Parâmetros de iluminação
-        speed: 1.5 + Math.random() * 2.5,
-        offset: Math.random() * Math.PI * 2,
-        baseIntensity: 2.0 + Math.random() * 3.0,
-        // Parâmetros de Movimento (Vôo)
-        flySpeedX: 0.8 + Math.random() * 0.8,
-        flySpeedY: 1.2 + Math.random() * 1.0,
-        flySpeedZ: 0.7 + Math.random() * 0.9,
-        rangeX: 0.03 + Math.random() * 0.04, // Raio de flutuação X
-        rangeY: 0.04 + Math.random() * 0.05, // Raio de flutuação Y
-        rangeZ: 0.03 + Math.random() * 0.04  // Raio de flutuação Z
-      };
-
-      mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
-      particleGroup.add(mesh);
-    }
-
-    return particleGroup;
+    grupoVagalumes.add(mesh);
   }
 
-  // CARREGAR O GLB
+  // CARREGAR MODELO 3D
   const loader = new GLTFLoader();
   loader.load(
     './assets/cafe_v007.glb',
     (gltf) => {
-      grupoVagalumes = criarVagalumes();
-      gltf.scene.add(grupoVagalumes);
-
       scene.add(gltf.scene);
-      console.log('✅ Café e vaga-lumes flutuantes carregados!');
     },
-    (progress) => {},
-    (error) => { console.error('Erro ao carregar o GLB:', error); }
+    undefined,
+    (error) => { console.error('Erro no GLB:', error); }
   );
 
   // CONFIGURAÇÃO DOS ASSETS
@@ -254,10 +244,9 @@
     }
   };
 
-  // RAYCASTING E EVENTOS
+  // RAYCASTING
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
-  let isZoomedIn = false;
   let isDragging = false;
   let pointerDownPos = { x: 0, y: 0 };
 
@@ -286,11 +275,7 @@
         (key) => key === meshName || key === objectName
       );
 
-      if (chave) {
-        renderer.domElement.style.cursor = 'pointer';
-      } else {
-        renderer.domElement.style.cursor = 'default';
-      }
+      renderer.domElement.style.cursor = chave ? 'pointer' : 'default';
     } else {
       renderer.domElement.style.cursor = 'default';
     }
@@ -314,34 +299,24 @@
         (key) => key === meshName || key === objectName
       );
 
-      if (chave) {
-        focarObjeto(configObjetos[chave]);
-      }
+      if (chave) focarObjeto(configObjetos[chave]);
     }
   });
 
   function focarObjeto(dados) {
-    isZoomedIn = true;
     controls.enabled = false;
-
     document.getElementById('info-title').innerText = dados.titulo;
     document.getElementById('info-description').innerText = dados.descricao;
     document.getElementById('info-panel').classList.add('active');
 
     gsap.to(camera.position, {
-      x: dados.cameraPos.x,
-      y: dados.cameraPos.y,
-      z: dados.cameraPos.z,
-      duration: 1.2,
-      ease: 'power2.out'
+      x: dados.cameraPos.x, y: dados.cameraPos.y, z: dados.cameraPos.z,
+      duration: 1.2, ease: 'power2.out'
     });
 
     gsap.to(controls.target, {
-      x: dados.targetPos.x,
-      y: dados.targetPos.y,
-      z: dados.targetPos.z,
-      duration: 1.2,
-      ease: 'power2.out',
+      x: dados.targetPos.x, y: dados.targetPos.y, z: dados.targetPos.z,
+      duration: 1.2, ease: 'power2.out',
       onUpdate: () => controls.update()
     });
   }
@@ -350,24 +325,15 @@
     document.getElementById('info-panel').classList.remove('active');
 
     gsap.to(camera.position, {
-      x: initialCameraPos.x,
-      y: initialCameraPos.y,
-      z: initialCameraPos.z,
-      duration: 1.2,
-      ease: 'power2.out'
+      x: initialCameraPos.x, y: initialCameraPos.y, z: initialCameraPos.z,
+      duration: 1.2, ease: 'power2.out'
     });
 
     gsap.to(controls.target, {
-      x: initialTargetPos.x,
-      y: initialTargetPos.y,
-      z: initialTargetPos.z,
-      duration: 1.2,
-      ease: 'power2.out',
+      x: initialTargetPos.x, y: initialTargetPos.y, z: initialTargetPos.z,
+      duration: 1.2, ease: 'power2.out',
       onUpdate: () => controls.update(),
-      onComplete: () => {
-        isZoomedIn = false;
-        controls.enabled = true;
-      }
+      onComplete: () => { controls.enabled = true; }
     });
   }
 
@@ -379,33 +345,30 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  // 5. LOOP DE ANIMAÇÃO (MOVIMENTANDO CADA PARTÍCULA EM TEMPO REAL)
   function animate() {
     requestAnimationFrame(animate);
     
-    // ANIMAÇÃO DOS VAGA-LUMES (BRILHO + MOVIMENTO DE VÔO)
-    if (grupoVagalumes) {
-      const elapsedTime = clock.getElapsedTime();
-      
-      grupoVagalumes.children.forEach((p) => {
-        const u = p.userData;
+    const elapsedTime = clock.getElapsedTime();
 
-        // 1. ANIMAÇÃO DE BRILHO (Piscar)
-        const pulse = Math.sin(elapsedTime * u.speed + u.offset) * 0.5 + 0.5;
-        p.material.emissiveIntensity = 0.8 + pulse * u.baseIntensity;
-        p.material.opacity = 0.3 + pulse * 0.5;
+    // Atualiza a posição de cada partícula individualmente
+    grupoVagalumes.children.forEach((p) => {
+      const u = p.userData;
 
-        // 2. ANIMAÇÃO DE VÔO (Movimento orgânico suave nos eixos X, Y e Z)
-        p.position.x = u.baseX + Math.sin(elapsedTime * u.flySpeedX + u.offset) * u.rangeX;
-        p.position.y = u.baseY + Math.cos(elapsedTime * u.flySpeedY + u.offset) * u.rangeY;
-        p.position.z = u.baseZ + Math.sin(elapsedTime * u.flySpeedZ + u.offset) * u.rangeZ;
-      });
-    }
+      // Movimento suave usando funções seno e cosseno
+      p.position.x = u.baseX + Math.sin(elapsedTime * u.speedX + u.offset) * u.rangeX;
+      p.position.y = u.baseY + Math.cos(elapsedTime * u.speedY + u.offset) * u.rangeY;
+      p.position.z = u.baseZ + Math.sin(elapsedTime * u.speedZ + u.offset) * u.rangeZ;
+
+      // Leve pulso de opacidade
+      p.material.opacity = 0.4 + (Math.sin(elapsedTime * 2 + u.offset) * 0.5 + 0.5) * 0.5;
+    });
 
     controls.update();
     renderer.render(scene, camera);
   }
-  animate();
 
+  animate();
 </script>
 </body>
 </html>

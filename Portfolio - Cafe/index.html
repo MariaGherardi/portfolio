@@ -151,13 +151,13 @@
   // CRIAÇÃO DAS PARTÍCULAS FIXAS (30 Geometrias suaves concentradas na mesh)
   function criarParticulasFixas() {
     const particleGroup = new THREE.Group();
-    const particleGeo = new THREE.IcosahedronGeometry(0.008, 0); // Pequenas partículas 3D
+    const particleGeo = new THREE.IcosahedronGeometry(0.003, 0); // Pequenas partículas 3D
     
     const particleMat = new THREE.MeshStandardMaterial({
-      color: 0xffe3d8,          // Cor base quente
-      emissive: 0xff8574,       // Emissivo rosado suave
-      emissiveIntensity: 0.35,  // Intensidade baixa para não estourar a iluminação
-      roughness: 0.5
+      color: 0xffffff,          // branco
+      emissive: 0xffa07a,       // Emissivo rosado suave
+      emissiveIntensity: 0.6,  // Intensidade baixa para não estourar a iluminação
+      roughness: 0.2
     });
 
     for (let i = 0; i < 30; i++) {

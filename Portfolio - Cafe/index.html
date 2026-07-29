@@ -10,7 +10,7 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      /* ENVIROMENT: Céu de Turim / Estilo Roman Klčo */
+      /* ENVIROMENT (ALTERADO): Céu de Turim / Estilo Roman Klčo */
       background-image: 
         radial-gradient(circle at 15% 85%, rgba(255, 133, 116, 0.55) 0%, transparent 45%),
         radial-gradient(circle at 85% 15%, rgba(132, 60, 246, 0.35) 0%, transparent 50%),
@@ -118,14 +118,14 @@
   camera.position.copy(initialCameraPos);
   camera.lookAt(initialTargetPos);
 
-  // RENDERER (Com alpha ativado)
+  // RENDERER (ALTERADO: alpha ativado para ver o fundo)
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setClearColor(0x000000, 0);
   document.body.appendChild(renderer.domElement);
 
-  // LUZES HARMONIZADAS COM O ENVIROMENT
+  // LUZES HARMONIZADAS COM O ENVIROMENT (ALTERADO)
   const ambient = new THREE.AmbientLight(0xf472b6, 0.5); // Luz de preenchimento suave rosada
   scene.add(ambient);
   
@@ -148,19 +148,26 @@
   controls.maxPolarAngle = Math.PI * 0.55;
   controls.enableZoom = false;
 
-  // CRIAÇÃO DAS PARTÍCULAS FIXAS (30 Geometrias suaves concentradas na mesh)
-  function criarParticulasFixas() {
-    const particleGroup = new THREE.Group();
-    const particleGeo = new THREE.IcosahedronGeometry(0.0015, 0); // Pequenas partículas 3D
-    
-    const particleMat = new THREE.MeshBasicMaterial({
-      color: 0xffffff,          // branco
-      transparent: true,       // Emissivo rosado suave
-      opacity: 1.0,  // 
-      blending: THREE.AdditiveBlending
-    });
+  // VARIÁVEL GLOBAL PARA OS VAGA-LUMES
+  let grupoVagalumes = null;
+  const clock = new THREE.Clock(); // Para controlar o tempo da animação
 
+  // FUNÇÃO: CRIAÇÃO DOS VAGA-LUMES (Poeira Estourada e Animada)
+  function criarVagalumes() {
+    const particleGroup = new THREE.Group();
+    const particleGeo = new THREE.IcosahedronGeometry(0.003, 0); // Tamanho ideal (pequeno)
+    
+    // Criamos 30 partículas individualmente para cada uma piscar no seu tempo
     for (let i = 0; i < 30; i++) {
+      const particleMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        emissive: 0xffe0b2,        // Dourado/Amarelo suave de vaga-lume
+        emissiveIntensity: 4.0,    // INTENSIDADE INICIAL ALTA: Para estourar a luz
+        roughness: 0.1,
+        transparent: true,
+        opacity: 0.9
+      });
+
       const mesh = new THREE.Mesh(particleGeo, particleMat);
       
       // Distribuição concentrada ao redor do centro da mesh do café
@@ -172,6 +179,13 @@
         Math.random() * 0.4 + 0.05, // Flutuando próximo ao chão do café
         Math.sin(angle) * radius
       );
+
+      // DADOS PARA A ANIMAÇÃO INDIVIDUAL (O segredo do piscar orgânico)
+      mesh.userData = {
+        speed: 1.5 + Math.random() * 2.5,   // Velocidade da piscada
+        offset: Math.random() * Math.PI * 2, // Deslocamento de tempo (para não piscarem juntas)
+        baseIntensity: 2.0 + Math.random() * 5.0 // Pico de brilho estourado (de 2.0 a 7.0)
+      };
 
       // Rotação aleatória para cada geocubo reagir diferente às luzes
       mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
@@ -187,12 +201,12 @@
   loader.load(
     './assets/cafe_v007.glb',
     (gltf) => {
-      // Adicionamos as partículas diretamente COMO FILHAS da cena do GLB
-      const particulas = criarParticulasFixas();
-      gltf.scene.add(particulas);
+      // Adicionamos as partículas diretamente COMO FILHAS da cena do GLB (p/ girar junto)
+      grupoVagalumes = criarVagalumes();
+      gltf.scene.add(grupoVagalumes);
 
       scene.add(gltf.scene);
-      console.log('✅ Café e partículas fixas carregados com sucesso!');
+      console.log('✅ Café e vaga-lumes carregados com sucesso!');
     },
     (progress) => {},
     (error) => { console.error('Erro ao carregar o GLB:', error); }
@@ -353,6 +367,24 @@
 
   function animate() {
     requestAnimationFrame(animate);
+    
+    // ANIMAÇÃO DOS VAGA-LUMES (Piscar Suave e Aleatório)
+    if (grupoVagalumes) {
+      const elapsedTime = clock.getElapsedTime();
+      
+      grupoVagalumes.children.forEach((p) => {
+        // Cria uma onda suave entre 0 e 1 usando seno baseada no tempo e offset individual
+        const pulse = Math.sin(elapsedTime * p.userData.speed + p.userData.offset) * 0.5 + 0.5;
+        
+        // Varia a emissão do pico alto (estourado) até um brilho baixinho sutil
+        // Isso faz cada um piscar em um ritmo orgânico
+        p.material.emissiveIntensity = 0.8 + pulse * p.userData.baseIntensity;
+        
+        // Suaviza a opacidade junto para dar o efeito que acende e apaga no ar
+        p.material.opacity = 0.4 + pulse * 0.6;
+      });
+    }
+
     controls.update();
     renderer.render(scene, camera);
   }

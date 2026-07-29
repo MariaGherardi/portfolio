@@ -153,11 +153,11 @@
     const particleGroup = new THREE.Group();
     const particleGeo = new THREE.IcosahedronGeometry(0.003, 0); // Pequenas partículas 3D
     
-    const particleMat = new THREE.MeshStandardMaterial({
+    const particleMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,          // branco
-      emissive: 0xffa07a,       // Emissivo rosado suave
-      emissiveIntensity: 0.6,  // Intensidade baixa para não estourar a iluminação
-      roughness: 0.2
+      transparent: true,       // Emissivo rosado suave
+      opacity: 0.8,  // Intensidade baixa para não estourar a iluminação
+      blending: THREE.AdditiveBlending
     });
 
     for (let i = 0; i < 30; i++) {

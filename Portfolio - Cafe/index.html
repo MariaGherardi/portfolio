@@ -70,7 +70,7 @@
 
   // 2. CÂMERA (Posicionada mais no alto, estilo vista isométrica/top-down da referência)
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  camera.position.set(-1.6, 1.3, 1.6); // <--- Ângulo levemente elevado
+  camera.position.set(-0.8, 0.75, 0.8); // <--- Ângulo levemente elevado
   camera.lookAt(0, 0.1, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -80,11 +80,11 @@
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
 
-  // 3. ADICIONANDO O CHÃO 3D (Estilo a referência)
-  const floorGeo = new THREE.PlaneGeometry(10, 10);
+  // --- 1. CHÃO REFORMULADO (Estilo Referência) ---
+  const floorGeo = new THREE.PlaneGeometry(20, 20);
   const floorMat = new THREE.MeshStandardMaterial({ 
-    color: 0xf4a261,    // Tom terroso/rosa pastel para harmonizar com o fundo
-    roughness: 0.6,
+    color: 0xe8a99a,      // Rosa pastel suave (idêntico à referência)
+    roughness: 0.4,       // Permite ver um reflexo suave do sol
     metalness: 0.1
   });
   const floor = new THREE.Mesh(floorGeo, floorMat);
@@ -93,14 +93,17 @@
   scene.add(floor);
 
   // 4. ILUMINAÇÃO DE DUPLO TOM (Inspirada na referência: Sol Quente x Luz Fria Ciano)
-  scene.add(new THREE.AmbientLight(0xf472b6, 0.5)); // Luz ambiente rosada
-
-  const sunLight = new THREE.DirectionalLight(0xffbe76, 1.4); // Luz Quente (Direita)
-  sunLight.position.set(3, 4, 2);
+  const ambient = new THREE.AmbientLight(0xffd1dc, 0.8); 
+  scene.add(ambient);
+  
+  // Sol Quente (Direita) - Aumentamos a intensidade para bater forte no chão!
+  const sunLight = new THREE.DirectionalLight(0xffe0b2, 2.5); 
+  sunLight.position.set(3, 5, 2);
   scene.add(sunLight);
-
-  const coolLight = new THREE.DirectionalLight(0x38bdf8, 0.7); // Luz Ciano (Esquerda - Sombra colorida)
-  coolLight.position.set(-3, 2, -2);
+  
+  // Luz de Preenchimento Ciano/Azul (Esquerda) - Dá o efeito da foto!
+  const coolLight = new THREE.DirectionalLight(0x7dd3fc, 1.2); 
+  coolLight.position.set(-3, 3, -2);
   scene.add(coolLight);
 
   // CONTROLES DE CÂMERA COM TRAVAS TOP-DOWN
@@ -162,8 +165,13 @@
   window.addEventListener('pointerup', (event) => { if (isDragging || event.target.closest('#info-panel')) return; raycaster.setFromCamera(mouse, camera); const intersects = raycaster.intersectObjects(scene.children, true); if (intersects.length > 0) { const clickedObject = intersects[0].object; const chave = Object.keys(configObjetos).find((key) => key === (clickedObject.geometry ? clickedObject.geometry.name : '') || key === clickedObject.name); if (chave) focarObjeto(configObjetos[chave]); }});
 
   function focarObjeto(dados) { controls.enabled = false; document.getElementById('info-panel').classList.add('active'); gsap.to(camera.position, { x: dados.cameraPos.x, y: dados.cameraPos.y, z: dados.cameraPos.z, duration: 1.2, ease: 'power2.out' }); gsap.to(controls.target, { x: dados.targetPos.x, y: dados.targetPos.y, z: dados.targetPos.z, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update() }); }
-  function resetToInitialPosition() { document.getElementById('info-panel').classList.remove('active'); gsap.to(camera.position, { x: -1.6, y: 1.3, z: 1.6, duration: 1.2, ease: 'power2.out' }); gsap.to(controls.target, { x: 0, y: 0, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } }); }
-
+  function resetToInitialPosition() {
+    document.getElementById('info-panel').classList.remove('active');
+    
+    // ATUALIZE AQUI TAMBÉM:
+    gsap.to(camera.position, { x: -0.8, y: 0.75, z: 0.8, duration: 1.2, ease: 'power2.out' });
+    gsap.to(controls.target, { x: 0, y: 0.1, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } });
+  }
   document.getElementById('close-btn').addEventListener('click', resetToInitialPosition);
   window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
 

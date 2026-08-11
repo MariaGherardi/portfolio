@@ -70,7 +70,7 @@
 
   // 2. CÂMERA (Posicionada mais no alto, estilo vista isométrica/top-down da referência)
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  camera.position.set(-0.8, 0.75, 0.8); // <--- Ângulo levemente elevado
+  camera.position.set(-0.8, 0.75, 0.8);
   camera.lookAt(0, 0.1, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -80,40 +80,38 @@
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
 
-  // --- 1. CHÃO REFORMULADO (Estilo Referência) ---
+  // --- 3. CHÃO ---
   const floorGeo = new THREE.PlaneGeometry(20, 20);
   const floorMat = new THREE.MeshStandardMaterial({ 
-    color: 0xe8a99a,      // Rosa pastel suave (idêntico à referência)
-    roughness: 0.4,       // Permite ver um reflexo suave do sol
+    color: 0xe8a99a, 
+    roughness: 0.4, 
     metalness: 0.1
   });
   const floor = new THREE.Mesh(floorGeo, floorMat);
-  floor.rotation.x = -Math.PI / 2; // Deita o plano para virar chão
-  floor.position.y = -0.01;        // Posiciona logo abaixo do modelo
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.01;
   scene.add(floor);
 
-  // 4. ILUMINAÇÃO DE DUPLO TOM (Inspirada na referência: Sol Quente x Luz Fria Ciano)
+  // 4. ILUMINAÇÃO
   const ambient = new THREE.AmbientLight(0xffd1dc, 0.8); 
   scene.add(ambient);
   
-  // Sol Quente (Direita) - Aumentamos a intensidade para bater forte no chão!
   const sunLight = new THREE.DirectionalLight(0xffe0b2, 2.5); 
   sunLight.position.set(3, 5, 2);
   scene.add(sunLight);
   
-  // Luz de Preenchimento Ciano/Azul (Esquerda) - Dá o efeito da foto!
   const coolLight = new THREE.DirectionalLight(0x7dd3fc, 1.2); 
   coolLight.position.set(-3, 3, -2);
   scene.add(coolLight);
 
-  // CONTROLES DE CÂMERA COM TRAVAS TOP-DOWN
+  // CONTROLES DE CÂMERA
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; 
   controls.enableZoom = false;
-  controls.minPolarAngle = Math.PI / 6;   // Não deixa subir excessivamente
-  controls.maxPolarAngle = Math.PI / 2.6; // Não deixa a câmera olhar de baixo do chão
+  controls.minPolarAngle = Math.PI / 6; 
+  controls.maxPolarAngle = Math.PI / 2.6;
 
-  // 5. VAGA-LUMES (Glow sutil mantido)
+  // 5. VAGA-LUMES
   const clock = new THREE.Clock();
   const grupoVagalumes = new THREE.Group();
   scene.add(grupoVagalumes);
@@ -148,30 +146,52 @@
     grupoVagalumes.add(mesh);
   }
 
-  // CARREGAR O MODELO GLB
+  // =========================================================================
+  // CARREGAR O MODELO GLB (SUBSTITUA 'NOME_DO_NOVO_ARQUIVO.glb' PELO SEU ASSET)
+  // =========================================================================
   const loader = new GLTFLoader();
-  loader.load('./assets/cafe_v007.glb', (gltf) => {
+  loader.load('./assets/NOME_DO_NOVO_ARQUIVO.glb', (gltf) => {
     scene.add(gltf.scene);
   });
 
   // CONFIGURAÇÕES DE INTERAÇÃO
-  const configObjetos = {'mesh_char_low': {titulo: 'Personagem',descricao: 'Modelo do personagem interagindo no cenário.',cameraPos: { x: -0.6, y: 0.4, z: 0.4 }, targetPos: { x: 0.15, y: 0.2, z: 0 }},'mesh_glass_low': {titulo: 'Vidros e Cafeteira',descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.',cameraPos: { x: -0.3, y: 0.5, z: 0.75 },targetPos: { x: 0.25, y: 0.2, z: 0.0 }},'mesh_artstation_low': {titulo: 'ArtStation',descricao: 'Confira meus outros modelos no portfólio do ArtStation.',cameraPos: { x: -0.2, y: 0.45, z: 0.65 },targetPos: { x: 0.2, y: 0.1, z: -0.1 }},'mesh_linkedin_low': {titulo: 'LinkedIn',descricao: 'Conecte-se comigo no LinkedIn para oportunidades.',cameraPos: { x: -0.3, y: 0.45, z: 0.55 },targetPos: { x: 0.25, y: 0.1, z: -0.2 }}};
+  const configObjetos = {
+    'mesh_char_low': { titulo: 'Personagem', descricao: 'Modelo do personagem interagindo no cenário.', cameraPos: { x: -0.6, y: 0.4, z: 0.4 }, targetPos: { x: 0.15, y: 0.2, z: 0 } },
+    'mesh_glass_low': { titulo: 'Vidros e Cafeteira', descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.', cameraPos: { x: -0.3, y: 0.5, z: 0.75 }, targetPos: { x: 0.25, y: 0.2, z: 0.0 } },
+    'mesh_artstation_low': { titulo: 'ArtStation', descricao: 'Confira meus outros modelos no portfólio do ArtStation.', cameraPos: { x: -0.2, y: 0.45, z: 0.65 }, targetPos: { x: 0.2, y: 0.1, z: -0.1 } },
+    'mesh_linkedin_low': { titulo: 'LinkedIn', descricao: 'Conecte-se comigo no LinkedIn para oportunidades.', cameraPos: { x: -0.3, y: 0.45, z: 0.55 }, targetPos: { x: 0.25, y: 0.1, z: -0.2 } }
+  };
+
   const raycaster = new THREE.Raycaster();
   const mouse = new THREE.Vector2();
   let isDragging = false, pointerDownPos = { x: 0, y: 0 };
 
   window.addEventListener('pointerdown', (e) => { isDragging = false; pointerDownPos = { x: e.clientX, y: e.clientY }; });
   window.addEventListener('pointermove', (e) => { if (Math.abs(e.clientX - pointerDownPos.x) > 5 || Math.abs(e.clientY - pointerDownPos.y) > 5) isDragging = true; mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; });
-  window.addEventListener('pointerup', (event) => { if (isDragging || event.target.closest('#info-panel')) return; raycaster.setFromCamera(mouse, camera); const intersects = raycaster.intersectObjects(scene.children, true); if (intersects.length > 0) { const clickedObject = intersects[0].object; const chave = Object.keys(configObjetos).find((key) => key === (clickedObject.geometry ? clickedObject.geometry.name : '') || key === clickedObject.name); if (chave) focarObjeto(configObjetos[chave]); }});
+  window.addEventListener('pointerup', (event) => {
+    if (isDragging || event.target.closest('#info-panel')) return;
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    if (intersects.length > 0) {
+      const clickedObject = intersects[0].object;
+      const chave = Object.keys(configObjetos).find((key) => key === (clickedObject.geometry ? clickedObject.geometry.name : '') || key === clickedObject.name);
+      if (chave) focarObjeto(configObjetos[chave]);
+    }
+  });
 
-  function focarObjeto(dados) { controls.enabled = false; document.getElementById('info-panel').classList.add('active'); gsap.to(camera.position, { x: dados.cameraPos.x, y: dados.cameraPos.y, z: dados.cameraPos.z, duration: 1.2, ease: 'power2.out' }); gsap.to(controls.target, { x: dados.targetPos.x, y: dados.targetPos.y, z: dados.targetPos.z, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update() }); }
+  function focarObjeto(dados) {
+    controls.enabled = false;
+    document.getElementById('info-panel').classList.add('active');
+    gsap.to(camera.position, { x: dados.cameraPos.x, y: dados.cameraPos.y, z: dados.cameraPos.z, duration: 1.2, ease: 'power2.out' });
+    gsap.to(controls.target, { x: dados.targetPos.x, y: dados.targetPos.y, z: dados.targetPos.z, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update() });
+  }
+
   function resetToInitialPosition() {
     document.getElementById('info-panel').classList.remove('active');
-    
-    // ATUALIZE AQUI TAMBÉM:
     gsap.to(camera.position, { x: -0.8, y: 0.75, z: 0.8, duration: 1.2, ease: 'power2.out' });
     gsap.to(controls.target, { x: 0, y: 0.1, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } });
   }
+
   document.getElementById('close-btn').addEventListener('click', resetToInitialPosition);
   window.addEventListener('resize', () => { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
 

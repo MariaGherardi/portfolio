@@ -146,11 +146,9 @@
     grupoVagalumes.add(mesh);
   }
 
-  // =========================================================================
-  // CARREGAR O MODELO GLB (SUBSTITUA 'NOME_DO_NOVO_ARQUIVO.glb' PELO SEU ASSET)
-  // =========================================================================
+
   const loader = new GLTFLoader();
-  loader.load('./assets/NOME_DO_NOVO_ARQUIVO.glb', (gltf) => {
+  loader.load('./assets/cafe.TESTTEXTURE.glb', (gltf) => {
     scene.add(gltf.scene);
   });
 

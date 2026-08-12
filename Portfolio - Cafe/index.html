@@ -97,11 +97,13 @@
   // CONTROLES DE CÂMERA
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; 
-  controls.enableZoom = false; // Mantém o zoom desativado
-  controls.target.set(0, 0.2, 0); // Ponto focal na altura do centro do café
+  controls.dampingFactor = 0.03; // Quanto menor, mais suave e "pesado" fica o movimento (padrão: 0.05)
+  controls.rotateSpeed = 0.25;   // Reduz drasticamente a velocidade de rotação do mouse (padrão: 1.0)
+  controls.enableZoom = false; 
+  controls.target.set(0, 0.2, 0); 
   
   controls.minPolarAngle = Math.PI / 6; 
-  controls.maxPolarAngle = Math.PI / 2.05; // Permite a câmera descer até quase o nível dos olhos
+  controls.maxPolarAngle = Math.PI / 2.05;
 
   // 5. VAGA-LUMES
   const clock = new THREE.Clock();

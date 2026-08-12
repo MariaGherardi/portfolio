@@ -70,7 +70,7 @@
 
   // 2. CÂMERA (Posicionada mais no alto, estilo vista isométrica/top-down da referência)
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  camera.position.set(-2.0, 1.8, 2.0);
+  camera.position.set(-1.2, 1.0, 1.2);
   camera.lookAt(0, 0.1, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -97,9 +97,12 @@
   // CONTROLES DE CÂMERA
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; 
-  controls.enableZoom = true; // Permite dar zoom in/out com o scroll
-  controls.maxDistance = 10;   // Define o limite máximo que o usuário pode se afastar
-  controls.minDistance = 0.5;  // Define o limite mínimo para aproximar
+  controls.enableZoom = true;
+  controls.zoomSpeed = 0.4;     // Controla a sensibilidade: valores menores deixam o zoom mais suave e sutil
+  controls.minDistance = 1.0;   // Limite para NÃO aproximar demais
+  controls.maxDistance = 2.5;   // Limite para NÃO afastar demais
+  controls.minPolarAngle = Math.PI / 6; 
+  controls.maxPolarAngle = Math.PI / 2.6;
 
   // 5. VAGA-LUMES
   const clock = new THREE.Clock();
@@ -176,7 +179,7 @@
 
   function resetToInitialPosition() {
     document.getElementById('info-panel').classList.remove('active');
-    gsap.to(camera.position, { x: -2.0, y: 1.8, z: 2.0, duration: 1.2, ease: 'power2.out' });
+    gsap.to(camera.position, { x: -1.2, y: 1.0, z: 1.2, duration: 1.2, ease: 'power2.out' });
     gsap.to(controls.target, { x: 0, y: 0.1, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } });
   }
 

@@ -70,7 +70,7 @@
 
   // 2. CÂMERA (Posicionada mais no alto, estilo vista isométrica/top-down da referência)
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  camera.position.set(-0.8, 0.75, 0.8);
+  camera.position.set(-2.0, 1.8, 2.0);
   camera.lookAt(0, 0.1, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -80,17 +80,7 @@
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
 
-  // --- 3. CHÃO ---
-  const floorGeo = new THREE.PlaneGeometry(20, 20);
-  const floorMat = new THREE.MeshStandardMaterial({ 
-    color: 0xe8a99a, 
-    roughness: 0.4, 
-    metalness: 0.1
-  });
-  const floor = new THREE.Mesh(floorGeo, floorMat);
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -0.01;
-  scene.add(floor);
+
 
   // 4. ILUMINAÇÃO
   const ambient = new THREE.AmbientLight(0xffd1dc, 0.8); 
@@ -107,9 +97,9 @@
   // CONTROLES DE CÂMERA
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; 
-  controls.enableZoom = false;
-  controls.minPolarAngle = Math.PI / 6; 
-  controls.maxPolarAngle = Math.PI / 2.6;
+  controls.enableZoom = true; // Permite dar zoom in/out com o scroll
+  controls.maxDistance = 10;   // Define o limite máximo que o usuário pode se afastar
+  controls.minDistance = 0.5;  // Define o limite mínimo para aproximar
 
   // 5. VAGA-LUMES
   const clock = new THREE.Clock();
@@ -186,7 +176,7 @@
 
   function resetToInitialPosition() {
     document.getElementById('info-panel').classList.remove('active');
-    gsap.to(camera.position, { x: -0.8, y: 0.75, z: 0.8, duration: 1.2, ease: 'power2.out' });
+    gsap.to(camera.position, { x: -2.0, y: 1.8, z: 2.0, duration: 1.2, ease: 'power2.out' });
     gsap.to(controls.target, { x: 0, y: 0.1, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } });
   }
 

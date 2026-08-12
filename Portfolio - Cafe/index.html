@@ -68,9 +68,9 @@
   const scene = new THREE.Scene();
   const w = window.innerWidth, h = window.innerHeight;
 
-  // 2. CÂMERA (Posicionada mais no alto, estilo vista isométrica/top-down da referência)
+  // 2. CÂMERA
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
-  camera.position.set(-0.85, 0.28, 0.85); // Afasta levemente no plano horizontal 
+  camera.position.set(-0.85, 0.28, 0.85);
   camera.lookAt(0, 0.2, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -79,8 +79,6 @@
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
-
-
 
   // 4. ILUMINAÇÃO
   const ambient = new THREE.AmbientLight(0xffd1dc, 0.8); 
@@ -97,8 +95,8 @@
   // CONTROLES DE CÂMERA
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; 
-  controls.dampingFactor = 0.03; // Quanto menor, mais suave e "pesado" fica o movimento (padrão: 0.05)
-  controls.rotateSpeed = 0.25;   // Reduz drasticamente a velocidade de rotação do mouse (padrão: 1.0)
+  controls.dampingFactor = 0.03;
+  controls.rotateSpeed = 0.25;   
   controls.enableZoom = false; 
   controls.target.set(0, 0.2, 0); 
   
@@ -119,7 +117,7 @@
     gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');  
     gradient.addColorStop(0.2, 'rgba(255, 200, 120, 0.8)'); 
     gradient.addColorStop(0.6, 'rgba(255, 140, 50, 0.15)');  
-    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');          
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');           
     ctx.fillStyle = gradient; ctx.fillRect(0, 0, 64, 64);
     return new THREE.CanvasTexture(canvas);
   }
@@ -140,10 +138,13 @@
     grupoVagalumes.add(mesh);
   }
 
-  // CARREGAMENTO DO MODELO 3D
+  // GRUPO E CARREGAMENTO DO MODELO 3D (Com Suporte a Flutuação)
+  const grupoCenario = new THREE.Group();
+  scene.add(grupoCenario);
+
   const loader = new GLTFLoader();
   loader.load('./assets/cafe.CAMVBIOTEXTURE2.glb', (gltf) => {
-    scene.add(gltf.scene);
+    grupoCenario.add(gltf.scene);
   });
 
   // CONFIGURAÇÕES DE INTERAÇÃO
@@ -180,8 +181,8 @@
 
   function resetToInitialPosition() {
     document.getElementById('info-panel').classList.remove('active');
-    gsap.to(camera.position, { x: -0.85, y: 0.10, z: 0.85, duration: 1.2, ease: 'power2.out' });
-    gsap.to(controls.target, { x: 0, y: 0.1, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } });
+    gsap.to(camera.position, { x: -0.85, y: 0.28, z: 0.85, duration: 1.2, ease: 'power2.out' });
+    gsap.to(controls.target, { x: 0, y: 0.2, z: 0, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update(), onComplete: () => { controls.enabled = true; } });
   }
 
   document.getElementById('close-btn').addEventListener('click', resetToInitialPosition);
@@ -191,6 +192,9 @@
   function animate() {
     requestAnimationFrame(animate);
     const elapsedTime = clock.getElapsedTime();
+
+    // Movimento de flutuação leve para todo o cenário
+    grupoCenario.position.y = Math.sin(elapsedTime * 0.8) * 0.012;
 
     grupoVagalumes.children.forEach((p) => {
       const u = p.userData;

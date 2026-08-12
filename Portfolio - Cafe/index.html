@@ -68,7 +68,7 @@
   const scene = new THREE.Scene();
   const w = window.innerWidth, h = window.innerHeight;
 
-  // 2. CÂMERA (Posicionada mais no alto, estilo vista isométrica/top-down da referência)
+  // 2. CÂMERA
   const camera = new THREE.PerspectiveCamera(45, w / h, 0.01, 100);
   camera.position.set(-0.8, 0.75, 0.8);
   camera.lookAt(0, 0.1, 0);
@@ -146,18 +146,22 @@
     grupoVagalumes.add(mesh);
   }
 
-
+  // CARREGAMENTO DO NOVO MODELO GLB
   const loader = new GLTFLoader();
-  loader.load('./assets/cafe.TESTTEXTURE.glb', (gltf) => {
+  loader.load('./assets/cafecambiotexture1.glb', (gltf) => {
     scene.add(gltf.scene);
   });
 
   // CONFIGURAÇÕES DE INTERAÇÃO
   const configObjetos = {
     'mesh_char_low': { titulo: 'Personagem', descricao: 'Modelo do personagem interagindo no cenário.', cameraPos: { x: -0.6, y: 0.4, z: 0.4 }, targetPos: { x: 0.15, y: 0.2, z: 0 } },
-    'mesh_glass_low': { titulo: 'Vidros e Cafeteira', descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.', cameraPos: { x: -0.3, y: 0.5, z: 0.75 }, targetPos: { x: 0.25, y: 0.2, z: 0.0 } },
+    'mesh_glass_main': { titulo: 'Vidros e Cafeteira', descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.', cameraPos: { x: -0.3, y: 0.5, z: 0.75 }, targetPos: { x: 0.25, y: 0.2, z: 0.0 } },
+    'mesh_glass_door': { titulo: 'Vidros e Cafeteira', descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.', cameraPos: { x: -0.3, y: 0.5, z: 0.75 }, targetPos: { x: 0.25, y: 0.2, z: 0.0 } },
+    'mesh_glass_left': { titulo: 'Vidros e Cafeteira', descricao: 'Detalhes e modelos 3D dos utilitários de vidro do café.', cameraPos: { x: -0.3, y: 0.5, z: 0.75 }, targetPos: { x: 0.25, y: 0.2, z: 0.0 } },
     'mesh_artstation_low': { titulo: 'ArtStation', descricao: 'Confira meus outros modelos no portfólio do ArtStation.', cameraPos: { x: -0.2, y: 0.45, z: 0.65 }, targetPos: { x: 0.2, y: 0.1, z: -0.1 } },
-    'mesh_linkedin_low': { titulo: 'LinkedIn', descricao: 'Conecte-se comigo no LinkedIn para oportunidades.', cameraPos: { x: -0.3, y: 0.45, z: 0.55 }, targetPos: { x: 0.25, y: 0.1, z: -0.2 } }
+    'mesh_linkedin_low': { titulo: 'LinkedIn', descricao: 'Conecte-se comigo no LinkedIn para oportunidades.', cameraPos: { x: -0.3, y: 0.45, z: 0.55 }, targetPos: { x: 0.25, y: 0.1, z: -0.2 } },
+    'mesh_linkedin_low.001': { titulo: 'LinkedIn', descricao: 'Conecte-se comigo no LinkedIn para oportunidades.', cameraPos: { x: -0.3, y: 0.45, z: 0.55 }, targetPos: { x: 0.25, y: 0.1, z: -0.2 } },
+    'mesh_linkedin_low.003': { titulo: 'LinkedIn', descricao: 'Conecte-se comigo no LinkedIn para oportunidades.', cameraPos: { x: -0.3, y: 0.45, z: 0.55 }, targetPos: { x: 0.25, y: 0.1, z: -0.2 } }
   };
 
   const raycaster = new THREE.Raycaster();
@@ -172,13 +176,18 @@
     const intersects = raycaster.intersectObjects(scene.children, true);
     if (intersects.length > 0) {
       const clickedObject = intersects[0].object;
-      const chave = Object.keys(configObjetos).find((key) => key === (clickedObject.geometry ? clickedObject.geometry.name : '') || key === clickedObject.name);
+      const chave = Object.keys(configObjetos).find((key) => 
+        key === (clickedObject.geometry ? clickedObject.geometry.name : '') || 
+        key === clickedObject.name
+      );
       if (chave) focarObjeto(configObjetos[chave]);
     }
   });
 
   function focarObjeto(dados) {
     controls.enabled = false;
+    document.getElementById('info-title').innerText = dados.titulo;
+    document.getElementById('info-description').innerText = dados.descricao;
     document.getElementById('info-panel').classList.add('active');
     gsap.to(camera.position, { x: dados.cameraPos.x, y: dados.cameraPos.y, z: dados.cameraPos.z, duration: 1.2, ease: 'power2.out' });
     gsap.to(controls.target, { x: dados.targetPos.x, y: dados.targetPos.y, z: dados.targetPos.z, duration: 1.2, ease: 'power2.out', onUpdate: () => controls.update() });

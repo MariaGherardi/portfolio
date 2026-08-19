@@ -73,6 +73,7 @@
   camera.position.set(-0.85, 0.28, 0.85);
   camera.lookAt(0, 0.2, 0);
 
+  // 3. RENDERIZADOR
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -80,23 +81,11 @@
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   document.body.appendChild(renderer.domElement);
 
-  // 4. ILUMINAÇÃO
-  const ambient = new THREE.AmbientLight(0xffd1dc, 0.8); 
-  scene.add(ambient);
-  
-  const sunLight = new THREE.DirectionalLight(0xffe0b2, 2.5); 
-  sunLight.position.set(3, 5, 2);
-  scene.add(sunLight);
-  
-  const coolLight = new THREE.DirectionalLight(0x7dd3fc, 1.2); 
-  coolLight.position.set(-3, 3, -2);
-  scene.add(coolLight);
-
   // CONTROLES DE CÂMERA
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; 
   controls.dampingFactor = 0.03;
-  controls.rotateSpeed = 0.25;   
+  controls.rotateSpeed = 0.25;    
   controls.enableZoom = false; 
   controls.target.set(0, 0.2, 0); 
   
